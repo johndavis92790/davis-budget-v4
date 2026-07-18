@@ -5,6 +5,7 @@ import {
   X,
   Home,
   ReceiptText,
+  CalendarDays,
   Repeat,
   HeartPulse,
   Lightbulb,
@@ -20,6 +21,7 @@ import { cn } from '@/lib/utils'
 const NAV = [
   { to: '/', label: 'Home', icon: Home, end: true },
   { to: '/history', label: 'History', icon: ReceiptText, end: false },
+  { to: '/calendar', label: 'Calendar', icon: CalendarDays, end: false },
   { to: '/recurring', label: 'Recurring', icon: Repeat, end: false },
   { to: '/hsa', label: 'HSA', icon: HeartPulse, end: false },
   { to: '/scenarios', label: 'Scenarios', icon: Lightbulb, end: false },

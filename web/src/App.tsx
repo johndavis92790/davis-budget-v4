@@ -12,6 +12,9 @@ import { EditTransactionPage } from '@/pages/EditTransactionPage'
 import { HistoryPage } from '@/pages/HistoryPage'
 import { RecurringPage } from '@/pages/RecurringPage'
 import { HSAPage } from '@/pages/HSAPage'
+import { CalendarPage } from '@/pages/CalendarPage'
+import { ScenariosPage } from '@/pages/ScenariosPage'
+import { ScenarioEditor } from '@/pages/ScenarioEditor'
 import { Placeholder } from '@/pages/Placeholder'
 import { UsersPage } from '@/pages/UsersPage'
 import { Toaster } from '@/components/ui/sonner'
@@ -44,12 +47,11 @@ function Gate() {
             <Route path="/add" element={<AddTransactionPage />} />
             <Route path="/edit/:id" element={<EditTransactionPage />} />
             <Route path="/history" element={<HistoryPage />} />
+            <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/recurring" element={<RecurringPage />} />
             <Route path="/hsa" element={<HSAPage />} />
-            <Route
-              path="/scenarios"
-              element={<Placeholder title="Scenarios" />}
-            />
+            <Route path="/scenarios" element={<ScenariosPage />} />
+            <Route path="/scenarios/:id" element={<ScenarioEditor />} />
             <Route path="/reports" element={<Placeholder title="Reports" />} />
             <Route path="/scan" element={<Placeholder title="Scan receipt" />} />
             <Route
