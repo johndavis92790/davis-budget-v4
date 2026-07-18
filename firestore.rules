@@ -3,21 +3,36 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Only these signed-in, verified Google accounts may access any data.
-    function allowed() {
-      return request.auth != null
-        && request.auth.token.email_verified == true
-        && request.auth.token.email in [
-          'john.davis.92790@gmail.com',
-          'habowler@gmail.com',
-          'hbdavis.byu@gmail.com'
-        ];
+    function verified() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function callerEmail() {
+      return request.auth.token.email.lower();
+    }
+    // The permanent super admin — hardcoded so it can never be locked out.
+    function isSuperAdmin() {
+      return verified() && callerEmail() == 'john.davis.92790@gmail.com';
+    }
+    // Any household member: the super admin, or an email present in allowedUsers.
+    function isAllowed() {
+      return verified() && (
+        isSuperAdmin() ||
+        exists(/databases/$(database)/documents/allowedUsers/$(callerEmail()))
+      );
     }
 
-    // Broad allowlist for the trusted household. Per-collection rules are
-    // tightened in the data-model task.
-    match /{document=**} {
-      allow read, write: if allowed();
+    // Household roster. Any allowed user may read it; only the super admin
+    // may add or remove users.
+    match /allowedUsers/{email} {
+      allow read: if isAllowed();
+      allow write: if isSuperAdmin();
+    }
+
+    // All other app data: any allowed household member. `allowedUsers` is
+    // excluded from this rule so members cannot grant themselves access.
+    match /{col}/{docId} {
+      allow read: if isAllowed();
+      allow write: if isAllowed() && col != 'allowedUsers';
     }
   }
 }

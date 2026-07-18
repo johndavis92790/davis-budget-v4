@@ -10,6 +10,7 @@ import {
   Lightbulb,
   BarChart3,
   Bell,
+  Users,
   LogOut,
   Wallet,
 } from 'lucide-react'
@@ -28,8 +29,12 @@ const NAV = [
 
 export function AppShell() {
   const [open, setOpen] = useState(false)
-  const { user, signOutUser } = useAuth()
+  const { user, signOutUser, isSuperAdmin } = useAuth()
   const location = useLocation()
+
+  const items = isSuperAdmin
+    ? [...NAV, { to: '/users', label: 'Users', icon: Users, end: false }]
+    : NAV
 
   // Close the drawer whenever the route changes.
   useEffect(() => {
@@ -76,7 +81,7 @@ export function AppShell() {
             </div>
 
             <div className="flex-1 space-y-1 overflow-y-auto p-2">
-              {NAV.map((item) => (
+              {items.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
