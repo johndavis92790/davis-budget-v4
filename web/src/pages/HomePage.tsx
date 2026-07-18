@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, ScanLine, ChevronRight, Loader2 } from 'lucide-react'
+import { Plus, ScanLine, ChevronRight, Loader2, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TransactionRow } from '@/components/TransactionRow'
+import { GoalsDialog } from '@/components/GoalsDialog'
 import { useData } from '@/lib/data'
 import { availableFunds, weekNetSpend } from '@/lib/compute'
 import { roundMoney, formatCurrency } from '@/lib/money'
@@ -11,6 +13,7 @@ import { cn } from '@/lib/utils'
 export function HomePage() {
   const nav = useNavigate()
   const { transactions, ledgerAnchor, weeklyGoals, loading } = useData()
+  const [goalsOpen, setGoalsOpen] = useState(false)
 
   const week = getFiscal(todayIso())
   const available = availableFunds(transactions, ledgerAnchor)
@@ -21,42 +24,58 @@ export function HomePage() {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={() => nav('/history')}
-          className="rounded-xl bg-card p-4 text-left"
-        >
-          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Weekly remaining
-          </div>
-          <div
-            className={cn(
-              'tabular mt-1.5 text-2xl font-semibold',
-              weeklyRemaining < 0 ? 'text-neg' : 'text-foreground',
-            )}
+      <div>
+        <div className="mb-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setGoalsOpen(true)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
           >
-            {formatCurrency(weeklyRemaining)}
-          </div>
-          <div className="mt-0.5 text-xs text-muted-foreground">
-            of {formatCurrency(target)} goal
-          </div>
-        </button>
-        <div className="rounded-xl bg-card p-4">
-          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Available funds
-          </div>
-          <div
-            className={cn(
-              'tabular mt-1.5 text-2xl font-semibold',
-              available < 0 ? 'text-neg' : 'text-pos',
-            )}
+            <Pencil className="size-3" />
+            Edit goals
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setGoalsOpen(true)}
+            className="rounded-xl bg-card p-4 text-left"
           >
-            {formatCurrency(available)}
-          </div>
-          <div className="mt-0.5 text-xs text-muted-foreground">
-            this fiscal month
-          </div>
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Weekly remaining
+            </div>
+            <div
+              className={cn(
+                'tabular mt-1.5 text-2xl font-semibold',
+                weeklyRemaining < 0 ? 'text-neg' : 'text-foreground',
+              )}
+            >
+              {formatCurrency(weeklyRemaining)}
+            </div>
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              of {formatCurrency(target)} goal
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setGoalsOpen(true)}
+            className="rounded-xl bg-card p-4 text-left"
+          >
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Available funds
+            </div>
+            <div
+              className={cn(
+                'tabular mt-1.5 text-2xl font-semibold',
+                available < 0 ? 'text-neg' : 'text-pos',
+              )}
+            >
+              {formatCurrency(available)}
+            </div>
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              this fiscal month
+            </div>
+          </button>
         </div>
       </div>
 
@@ -110,6 +129,8 @@ export function HomePage() {
           </div>
         )}
       </div>
+
+      <GoalsDialog open={goalsOpen} onOpenChange={setGoalsOpen} />
     </div>
   )
 }
