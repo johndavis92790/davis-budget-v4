@@ -11,10 +11,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { getDownloadURL, ref } from 'firebase/storage'
+import { FileArchive } from 'lucide-react'
 import { categoryIcon } from '@/lib/categories'
 import { useAuth } from '@/lib/auth'
 import { useData } from '@/lib/data'
 import { reimburseHsaExpenses } from '@/lib/db'
+import { storage } from '@/lib/firebase'
+import { exportAuditZipFn } from '@/lib/functions'
 import { formatCurrency, parseCurrency, roundMoney, sumMoney } from '@/lib/money'
 import { formatDatePretty, todayIso } from '@/lib/fiscal'
 import { downloadCsv } from '@/lib/export'
@@ -34,6 +38,7 @@ export function HSAPage() {
   const [amounts, setAmounts] = useState<Record<string, string>>({})
   const [date, setDate] = useState(todayIso())
   const [saving, setSaving] = useState(false)
+  const [zipping, setZipping] = useState(false)
 
   const { hsa, unreimbursed, reimbursed, stats } = useMemo(() => {
     const hsa = transactions.filter((t) => t.hsa)
@@ -104,6 +109,22 @@ export function HSAPage() {
     downloadCsv(`hsa-expenses-${todayIso()}.csv`, rows)
   }
 
+  async function exportZip() {
+    setZipping(true)
+    try {
+      const r = await exportAuditZipFn({ scope: 'hsa' })
+      const url = await getDownloadURL(ref(storage, r.data.path))
+      window.open(url, '_blank')
+      toast.success(
+        `Packaged ${r.data.files} receipts for ${r.data.transactions} HSA items`,
+      )
+    } catch {
+      toast.error('Could not build the audit package')
+    } finally {
+      setZipping(false)
+    }
+  }
+
   const dialogTotal = sumMoney(
     selectedList.map((t) => parseCurrency(amounts[t.id] ?? String(t.amount))),
   )
@@ -133,6 +154,20 @@ export function HSAPage() {
           tone="amber"
         />
       </div>
+
+      <Button
+        variant="outline"
+        onClick={exportZip}
+        disabled={zipping}
+        className="w-full gap-2"
+      >
+        {zipping ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <FileArchive className="size-4" />
+        )}
+        Download audit package (receipts + manifest)
+      </Button>
 
       {loading ? (
         <div className="flex justify-center py-16">
