@@ -11,6 +11,7 @@ import { AddTransactionPage } from '@/pages/AddTransactionPage'
 import { EditTransactionPage } from '@/pages/EditTransactionPage'
 import { HistoryPage } from '@/pages/HistoryPage'
 import { RecurringPage } from '@/pages/RecurringPage'
+import { HSAPage } from '@/pages/HSAPage'
 import { Placeholder } from '@/pages/Placeholder'
 import { UsersPage } from '@/pages/UsersPage'
 import { Toaster } from '@/components/ui/sonner'
@@ -44,7 +45,7 @@ function Gate() {
             <Route path="/edit/:id" element={<EditTransactionPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/recurring" element={<RecurringPage />} />
-            <Route path="/hsa" element={<Placeholder title="HSA expenses" />} />
+            <Route path="/hsa" element={<HSAPage />} />
             <Route
               path="/scenarios"
               element={<Placeholder title="Scenarios" />}
