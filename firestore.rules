@@ -1,0 +1,23 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Only these signed-in, verified Google accounts may access any data.
+    function allowed() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+          'john.davis.92790@gmail.com',
+          'habowler@gmail.com',
+          'hbdavis.byu@gmail.com'
+        ];
+    }
+
+    // Broad allowlist for the trusted household. Per-collection rules are
+    // tightened in the data-model task.
+    match /{document=**} {
+      allow read, write: if allowed();
+    }
+  }
+}

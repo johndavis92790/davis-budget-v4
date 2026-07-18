@@ -1,0 +1,19 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function allowed() {
+      return request.auth != null
+        && request.auth.token.email in [
+          'john.davis.92790@gmail.com',
+          'habowler@gmail.com',
+          'hbdavis.byu@gmail.com'
+        ];
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if allowed();
+    }
+  }
+}
