@@ -4,6 +4,7 @@ import { ArrowLeft, Trash2, Undo2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { TransactionForm } from '@/components/TransactionForm'
 import { TransactionRow } from '@/components/TransactionRow'
+import { ReceiptsSection } from '@/components/ReceiptsSection'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -106,6 +107,8 @@ export function EditTransactionPage() {
       </h1>
 
       <TransactionForm mode="edit" initial={t} onSaved={() => nav(-1)} />
+
+      <ReceiptsSection transactionId={t.id} />
 
       {t.hsa && t.hsaReimbursedDate && (
         <div className="rounded-xl bg-pos/10 px-4 py-3 text-sm">

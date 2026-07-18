@@ -15,6 +15,7 @@ import { HSAPage } from '@/pages/HSAPage'
 import { CalendarPage } from '@/pages/CalendarPage'
 import { ScenariosPage } from '@/pages/ScenariosPage'
 import { ScenarioEditor } from '@/pages/ScenarioEditor'
+import { ScanPage } from '@/pages/ScanPage'
 import { Placeholder } from '@/pages/Placeholder'
 import { UsersPage } from '@/pages/UsersPage'
 import { Toaster } from '@/components/ui/sonner'
@@ -53,7 +54,7 @@ function Gate() {
             <Route path="/scenarios" element={<ScenariosPage />} />
             <Route path="/scenarios/:id" element={<ScenarioEditor />} />
             <Route path="/reports" element={<Placeholder title="Reports" />} />
-            <Route path="/scan" element={<Placeholder title="Scan receipt" />} />
+            <Route path="/scan" element={<ScanPage />} />
             <Route
               path="/notifications"
               element={<Placeholder title="Notifications" />}

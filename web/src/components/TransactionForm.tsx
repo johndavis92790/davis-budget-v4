@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
 type Props = {
   mode: 'add' | 'edit'
   initial?: Partial<Transaction>
-  onSaved: () => void
+  onSaved: (id?: string) => void
 }
 
 export function TransactionForm({ mode, initial, onSaved }: Props) {
@@ -68,14 +68,15 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
         description: description.trim(),
         hsa: isExpense ? hsa : false,
       }
+      let newId: string | undefined
       if (mode === 'add') {
-        await addTransaction(payload, user?.email ?? undefined)
+        newId = await addTransaction(payload, user?.email ?? undefined)
         toast.success('Added')
       } else if (initial?.id) {
         await updateTransaction(initial.id, payload)
         toast.success('Saved')
       }
-      onSaved()
+      onSaved(newId)
     } catch (e) {
       console.error(e)
       toast.error('Could not save')
