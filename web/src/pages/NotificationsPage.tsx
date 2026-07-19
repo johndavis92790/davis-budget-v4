@@ -22,8 +22,11 @@ export function NotificationsPage() {
     setStatus(notificationStatus())
     setBusy(false)
     if (r.ok) toast.success('Notifications enabled on this device')
-    else if (r.reason === 'denied') toast.error('Permission was blocked')
+    else if (r.reason === 'denied') toast.error('Blocked in your browser settings')
+    else if (r.reason === 'default') toast.error('Prompt dismissed — tap Enable again')
     else if (r.reason === 'not-configured') toast.error('Not activated yet')
+    else if (r.reason === 'unsupported')
+      toast.error('This browser doesn’t support push')
     else toast.error('Could not enable notifications')
   }
 
@@ -35,6 +38,7 @@ export function NotificationsPage() {
   }
 
   const enabled = status === 'granted'
+  const blocked = status === 'denied'
 
   return (
     <div className="space-y-5">
@@ -69,11 +73,17 @@ export function NotificationsPage() {
         </div>
       </div>
 
-      {!configured && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-500">
-          Notifications aren't activated yet — a Web Push key needs to be added
-          in the Firebase console (Cloud Messaging → Web Push certificates).
-          Everything else is wired up and ready.
+      {blocked && (
+        <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-500">
+          <div className="font-medium">Notifications are blocked for this site</div>
+          <p className="text-amber-500/90">
+            Your browser is blocking the permission prompt. To turn them on:
+          </p>
+          <ol className="list-decimal space-y-1 pl-5 text-amber-500/90">
+            <li>Tap the tune/settings icon just left of the address bar</li>
+            <li>Open Permissions → Notifications</li>
+            <li>Switch it to Allow, then tap Enable again</li>
+          </ol>
         </div>
       )}
 
