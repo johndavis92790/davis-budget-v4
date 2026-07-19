@@ -5,30 +5,51 @@ import {
   Camera,
   Loader2,
   Sparkles,
-  Trash2,
-  Plus,
   SplitSquareVertical,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
 import { TransactionForm } from '@/components/TransactionForm'
-import { CategorySelect } from '@/components/CategorySelect'
+import {
+  SplitEditor,
+  type SplitRow,
+  type ParsedSplit,
+} from '@/components/SplitEditor'
 import { useAuth } from '@/lib/auth'
-import { scanReceiptFn, type ScanResult } from '@/lib/functions'
+import { scanReceiptFn, type ScanResult, type ScanLineItem } from '@/lib/functions'
 import { uploadReceipt, fileToBase64 } from '@/lib/receipts'
 import { addTransaction } from '@/lib/db'
-import { parseCurrency, formatCurrency, sumMoney } from '@/lib/money'
+import { roundMoney } from '@/lib/money'
 import { todayIso } from '@/lib/fiscal'
 import type { Transaction } from '@/lib/types'
 
 type Step = 'capture' | 'scanning' | 'review' | 'split'
-type SplitItem = {
-  description: string
-  amount: string
-  category: string
-  hsa: boolean
+
+/** Collapse AI line items into one row per category (+ HSA group), summing amounts. */
+function groupLineItems(items: ScanLineItem[]): SplitRow[] {
+  const map = new Map<
+    string,
+    { category: string; hsa: boolean; amount: number; descs: string[] }
+  >()
+  for (const li of items) {
+    const key = `${li.category}|${li.hsa ? 'h' : 'n'}`
+    const g = map.get(key) ?? {
+      category: li.category,
+      hsa: !!li.hsa,
+      amount: 0,
+      descs: [],
+    }
+    g.amount += typeof li.amount === 'number' ? li.amount : 0
+    if (li.description) g.descs.push(li.description)
+    map.set(key, g)
+  }
+  return [...map.values()].map((g) => ({
+    category: g.category,
+    hsa: g.hsa,
+    amount: roundMoney(g.amount).toFixed(2),
+    description:
+      g.descs.slice(0, 4).join(', ') +
+      (g.descs.length > 4 ? `, +${g.descs.length - 4} more` : ''),
+  }))
 }
 
 export function ScanPage() {
@@ -39,7 +60,8 @@ export function ScanPage() {
   const [file, setFile] = useState<File | null>(null)
   const [result, setResult] = useState<ScanResult | null>(null)
   const [saving, setSaving] = useState(false)
-  const [splitItems, setSplitItems] = useState<SplitItem[]>([])
+  const [splitRows, setSplitRows] = useState<SplitRow[]>([])
+  const [splitDate, setSplitDate] = useState(todayIso())
 
   async function onFile(f: File) {
     setFile(f)
@@ -68,46 +90,29 @@ export function ScanPage() {
   }
 
   function startSplit() {
-    const items: SplitItem[] = (result?.lineItems ?? []).map((li) => ({
-      description: li.description,
-      amount: String(li.amount),
-      category: li.category,
-      hsa: !!li.hsa,
-    }))
-    setSplitItems(
-      items.length
-        ? items
-        : [{ description: '', amount: '', category: result?.category ?? '', hsa: false }],
-    )
+    setSplitRows(groupLineItems(result?.lineItems ?? []))
+    setSplitDate(result?.date || todayIso())
     setStep('split')
   }
 
-  async function saveSplit() {
+  async function saveSplit(rows: ParsedSplit[]) {
     setSaving(true)
     try {
-      const date = result?.date || todayIso()
       const ids: string[] = []
-      for (const it of splitItems) {
-        const amt = parseCurrency(it.amount)
-        if (amt <= 0 || !it.category) continue
+      for (const r of rows) {
         const id = await addTransaction(
           {
-            date,
+            date: splitDate,
             type: 'expense',
-            category: it.category,
+            category: r.category,
             tags: result?.tags ?? [],
-            amount: amt,
-            description: it.description.trim(),
-            hsa: it.hsa,
+            amount: r.amount,
+            description: r.description,
+            hsa: r.hsa,
           },
           user?.email ?? undefined,
         )
         ids.push(id)
-      }
-      if (!ids.length) {
-        toast.error('Add at least one valid item')
-        setSaving(false)
-        return
       }
       if (file) {
         for (const id of ids) {
@@ -139,7 +144,7 @@ export function ScanPage() {
       }
     : undefined
 
-  const splitTotal = sumMoney(splitItems.map((i) => parseCurrency(i.amount)))
+  const lineGroups = groupLineItems(result?.lineItems ?? [])
 
   return (
     <div className="space-y-5 pb-6">
@@ -177,9 +182,7 @@ export function ScanPage() {
               <Camera className="size-7" />
             </div>
             <span className="font-medium">Take photo or upload</span>
-            <span className="text-xs text-muted-foreground">
-              Image or PDF
-            </span>
+            <span className="text-xs text-muted-foreground">Image or PDF</span>
           </button>
         </div>
       )}
@@ -204,7 +207,7 @@ export function ScanPage() {
             <span>Review the details AI pulled from your receipt, then save.</span>
           </div>
 
-          {result?.lineItems && result.lineItems.length >= 2 && (
+          {lineGroups.length >= 2 && (
             <button
               type="button"
               onClick={startSplit}
@@ -213,10 +216,11 @@ export function ScanPage() {
               <SplitSquareVertical className="size-5 text-primary" />
               <div className="flex-1">
                 <div className="text-sm font-medium">
-                  This receipt has {result.lineItems.length} items
+                  This receipt spans {lineGroups.length} categories
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Split into separate transactions (e.g. isolate an HSA item)
+                  Split into separate transactions (
+                  {lineGroups.map((g) => g.category).join(', ')})
                 </div>
               </div>
             </button>
@@ -229,101 +233,14 @@ export function ScanPage() {
       {step === 'split' && (
         <div className="space-y-4">
           <h1 className="text-lg font-semibold">Split receipt</h1>
-          <div className="space-y-3">
-            {splitItems.map((it, i) => (
-              <div key={i} className="space-y-2 rounded-xl bg-card p-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1">
-                    <CategorySelect
-                      value={it.category}
-                      onChange={(v) =>
-                        setSplitItems((s) =>
-                          s.map((x, j) => (j === i ? { ...x, category: v } : x)),
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="relative w-24">
-                    <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      $
-                    </span>
-                    <Input
-                      inputMode="decimal"
-                      value={it.amount}
-                      onChange={(e) =>
-                        setSplitItems((s) =>
-                          s.map((x, j) =>
-                            j === i ? { ...x, amount: e.target.value } : x,
-                          ),
-                        )
-                      }
-                      className="tabular h-9 pl-6 text-right"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSplitItems((s) => s.filter((_, j) => j !== i))
-                    }
-                    className="text-muted-foreground hover:text-neg"
-                    aria-label="Remove item"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-                <Input
-                  value={it.description}
-                  onChange={(e) =>
-                    setSplitItems((s) =>
-                      s.map((x, j) =>
-                        j === i ? { ...x, description: e.target.value } : x,
-                      ),
-                    )
-                  }
-                  placeholder="Description"
-                  className="h-9"
-                />
-                <label className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">HSA eligible</span>
-                  <Switch
-                    checked={it.hsa}
-                    onCheckedChange={(v) =>
-                      setSplitItems((s) =>
-                        s.map((x, j) => (j === i ? { ...x, hsa: v } : x)),
-                      )
-                    }
-                  />
-                </label>
-              </div>
-            ))}
-          </div>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() =>
-              setSplitItems((s) => [
-                ...s,
-                { description: '', amount: '', category: '', hsa: false },
-              ])
-            }
-          >
-            <Plus className="size-4" />
-            Add item
-          </Button>
-          <div className="flex items-center justify-between rounded-lg bg-secondary px-3 py-2">
-            <span className="text-sm font-medium">Total</span>
-            <span className="tabular font-semibold">
-              {formatCurrency(splitTotal)}
-            </span>
-          </div>
-          <Button
-            onClick={saveSplit}
-            disabled={saving}
-            className="h-11 w-full text-base"
-          >
-            {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-            Save {splitItems.length} transaction{splitItems.length > 1 ? 's' : ''}
-          </Button>
+          <SplitEditor
+            initialRows={splitRows}
+            date={splitDate}
+            onDate={setSplitDate}
+            onSubmit={saveSplit}
+            saving={saving}
+            compareTotal={result?.amount}
+          />
         </div>
       )}
     </div>

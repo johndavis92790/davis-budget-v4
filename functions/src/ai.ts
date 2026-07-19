@@ -62,7 +62,7 @@ Return JSON matching the provided schema:
 - merchant: the store or vendor name.
 - tags: 0-4 short tags (brand, store, or purpose), e.g. "Amazon", "Costco".
 - hsa: true ONLY if this is a likely HSA-eligible medical expense (prescriptions, copays, medical supplies, dental, vision, clinics). Otherwise false.
-- lineItems: include ONLY when the receipt clearly spans MULTIPLE categories, or mixes HSA-eligible with non-eligible items, such that splitting into separate transactions is useful. Each: {description, amount, category, hsa}. Otherwise return an empty array.
+- lineItems: include ONLY when the receipt spans MULTIPLE categories (e.g. a store run with both food and clothes), or mixes HSA-eligible with non-eligible items. Return ONE entry PER category group — NOT one per product. Each entry's amount is that group's combined subtotal INCLUDING its proportional share of tax/fees, so the lineItems amounts add up to the grand total. description briefly lists what's in that group (e.g. "Milk, bread, bananas"). If the whole receipt is a single category, return an empty array.
 
 Respond with only the JSON.`
 

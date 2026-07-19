@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Trash2, Undo2 } from 'lucide-react'
+import { ArrowLeft, Trash2, Undo2, SplitSquareVertical } from 'lucide-react'
 import { toast } from 'sonner'
 import { TransactionForm } from '@/components/TransactionForm'
 import { TransactionRow } from '@/components/TransactionRow'
 import { ReceiptsSection } from '@/components/ReceiptsSection'
+import { SplitEditor, type ParsedSplit } from '@/components/SplitEditor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,11 +29,13 @@ import {
 import { useAuth } from '@/lib/auth'
 import { useData } from '@/lib/data'
 import {
+  addTransaction,
   addRefundForExpense,
   deleteTransaction,
   undoReimbursement,
   clearHsaReimbursement,
 } from '@/lib/db'
+import { copyReceipts } from '@/lib/receipts'
 import { parseCurrency, formatCurrency } from '@/lib/money'
 import { todayIso, formatDatePretty } from '@/lib/fiscal'
 import { isReimbursed, TYPE_LABELS } from '@/lib/types'
@@ -48,6 +51,9 @@ export function EditTransactionPage() {
   const [refundOpen, setRefundOpen] = useState(false)
   const [refundAmt, setRefundAmt] = useState('')
   const [refundDate, setRefundDate] = useState(todayIso())
+  const [splitting, setSplitting] = useState(false)
+  const [splitSaving, setSplitSaving] = useState(false)
+  const [splitDate, setSplitDate] = useState(todayIso())
 
   if (!t) {
     return (
@@ -98,6 +104,77 @@ export function EditTransactionPage() {
     toast.success('Marked as not reimbursed')
   }
 
+  function openSplit() {
+    setSplitDate(t!.date)
+    setSplitting(true)
+  }
+
+  async function doSplit(rows: ParsedSplit[]) {
+    setSplitSaving(true)
+    try {
+      const ids: string[] = []
+      for (const r of rows) {
+        const id = await addTransaction(
+          {
+            date: splitDate,
+            type: 'expense',
+            category: r.category,
+            tags: t!.tags ?? [],
+            amount: r.amount,
+            description: r.description,
+            hsa: r.hsa,
+          },
+          user?.email ?? undefined,
+        )
+        ids.push(id)
+      }
+      // Carry the original's receipts onto each new part, then remove the original.
+      for (const id of ids) await copyReceipts(t!.id, id)
+      await deleteTransaction(t!.id)
+      toast.success(`Split into ${ids.length} transactions`)
+      nav('/history')
+    } catch {
+      toast.error('Could not split')
+    } finally {
+      setSplitSaving(false)
+    }
+  }
+
+  if (splitting) {
+    return (
+      <div className="space-y-4">
+        <button
+          type="button"
+          onClick={() => setSplitting(false)}
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" />
+          Cancel split
+        </button>
+        <h1 className="text-lg font-semibold">Split this expense</h1>
+        <p className="text-sm text-muted-foreground">
+          Break {formatCurrency(t.amount)} into separate category transactions.
+          Receipts are copied to each; the original is removed.
+        </p>
+        <SplitEditor
+          initialRows={[
+            {
+              category: t.category,
+              amount: String(t.amount),
+              description: t.description,
+              hsa: !!t.hsa,
+            },
+          ]}
+          date={splitDate}
+          onDate={setSplitDate}
+          onSubmit={doSplit}
+          saving={splitSaving}
+          compareTotal={t.amount}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-5">
       <button
@@ -140,16 +217,26 @@ export function EditTransactionPage() {
 
       {t.type === 'expense' && (
         <div className="space-y-2">
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => {
-              setRefundAmt(String(t.amount))
-              setRefundOpen(true)
-            }}
-          >
-            Add refund
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setRefundAmt(String(t.amount))
+                setRefundOpen(true)
+              }}
+            >
+              Add refund
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1 gap-2"
+              onClick={openSplit}
+            >
+              <SplitSquareVertical className="size-4" />
+              Split
+            </Button>
+          </div>
           {refunds.length > 0 && (
             <div className="space-y-2">
               <div className="text-xs font-medium text-muted-foreground">
