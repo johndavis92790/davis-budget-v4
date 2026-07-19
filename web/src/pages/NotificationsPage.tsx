@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Bell, BellOff, Loader2, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -7,6 +7,7 @@ import { sendTestNotificationFn } from '@/lib/functions'
 import {
   enableNotifications,
   disableNotifications,
+  ensureRegistered,
   notificationStatus,
   notificationsConfigured,
 } from '@/lib/notifications'
@@ -18,12 +19,29 @@ export function NotificationsPage() {
   const [testing, setTesting] = useState(false)
   const configured = notificationsConfigured()
 
+  // If permission is already granted, make sure this device's token is stored.
+  useEffect(() => {
+    if (status === 'granted' && user?.email) {
+      ensureRegistered(user.email).then((r) => {
+        if (!r.ok) console.warn('ensureRegistered:', r.reason)
+      })
+    }
+  }, [status, user?.email])
+
   async function sendTest() {
     setTesting(true)
     try {
-      const r = await sendTestNotificationFn()
+      let r = await sendTestNotificationFn()
+      if (r.data.sent === 0 && user?.email) {
+        // Token may not be registered yet — register this device and retry.
+        const reg = await ensureRegistered(user.email)
+        if (reg.ok) r = await sendTestNotificationFn()
+      }
       if (r.data.sent > 0) toast.success('Test sent — check your notifications')
-      else toast.error('No registered device found on your account yet')
+      else
+        toast.error(
+          "Couldn't register this device. Try turning notifications off and on.",
+        )
     } catch {
       toast.error('Could not send test')
     } finally {
