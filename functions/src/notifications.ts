@@ -1,8 +1,52 @@
 import { onDocumentWritten } from 'firebase-functions/v2/firestore'
+import { onCall } from 'firebase-functions/v2/https'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
+import { assertAllowed } from './lib/auth'
 
 const REGION = 'us-central1'
+
+async function pruneStale(
+  tokens: string[],
+  responses: { success: boolean; error?: { code?: string } }[],
+) {
+  const db = getFirestore()
+  const stale = tokens.filter((_, i) => {
+    const code = responses[i]?.error?.code
+    return (
+      !responses[i]?.success &&
+      (code === 'messaging/registration-token-not-registered' ||
+        code === 'messaging/invalid-registration-token')
+    )
+  })
+  await Promise.all(
+    stale.map((tk) => db.collection('fcmTokens').doc(tk).delete().catch(() => undefined)),
+  )
+}
+
+// Sends a test push to the caller's own registered devices.
+export const sendTestNotification = onCall({ region: REGION }, async (req) => {
+  const email = await assertAllowed(req)
+  const db = getFirestore()
+  const snap = await db.collection('fcmTokens').get()
+  const tokens = snap.docs
+    .map((d) => d.data() as { token?: string; userEmail?: string })
+    .filter((t) => (t.userEmail ?? '').toLowerCase() === email.toLowerCase())
+    .map((t) => t.token)
+    .filter((t): t is string => !!t)
+  if (!tokens.length) return { sent: 0 }
+
+  const res = await getMessaging().sendEachForMulticast({
+    tokens,
+    notification: {
+      title: 'Davis Budget',
+      body: "Test notification — you're all set! 🎉",
+    },
+    webpush: { fcmOptions: { link: '/' } },
+  })
+  await pruneStale(tokens, res.responses)
+  return { sent: res.successCount }
+})
 
 // Notify the *other* household members when someone changes a transaction.
 export const onTransactionWrite = onDocumentWritten(

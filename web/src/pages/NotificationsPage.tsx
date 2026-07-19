@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Bell, BellOff, Loader2 } from 'lucide-react'
+import { Bell, BellOff, Loader2, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth'
+import { sendTestNotificationFn } from '@/lib/functions'
 import {
   enableNotifications,
   disableNotifications,
@@ -14,7 +15,21 @@ export function NotificationsPage() {
   const { user } = useAuth()
   const [status, setStatus] = useState(notificationStatus())
   const [busy, setBusy] = useState(false)
+  const [testing, setTesting] = useState(false)
   const configured = notificationsConfigured()
+
+  async function sendTest() {
+    setTesting(true)
+    try {
+      const r = await sendTestNotificationFn()
+      if (r.data.sent > 0) toast.success('Test sent — check your notifications')
+      else toast.error('No registered device found on your account yet')
+    } catch {
+      toast.error('Could not send test')
+    } finally {
+      setTesting(false)
+    }
+  }
 
   async function enable() {
     setBusy(true)
@@ -60,10 +75,29 @@ export function NotificationsPage() {
 
         <div className="mt-4">
           {enabled ? (
-            <Button variant="outline" onClick={disable} disabled={busy} className="gap-2">
-              {busy ? <Loader2 className="size-4 animate-spin" /> : <BellOff className="size-4" />}
-              Turn off on this device
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={sendTest} disabled={testing} className="gap-2">
+                {testing ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Send className="size-4" />
+                )}
+                Send test
+              </Button>
+              <Button
+                variant="outline"
+                onClick={disable}
+                disabled={busy}
+                className="gap-2"
+              >
+                {busy ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <BellOff className="size-4" />
+                )}
+                Turn off on this device
+              </Button>
+            </div>
           ) : (
             <Button onClick={enable} disabled={busy || !configured} className="gap-2">
               {busy ? <Loader2 className="size-4 animate-spin" /> : <Bell className="size-4" />}

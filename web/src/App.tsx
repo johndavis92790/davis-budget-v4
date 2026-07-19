@@ -6,6 +6,7 @@ import { DataProvider } from '@/lib/data'
 import { SignIn } from '@/components/SignIn'
 import { NotAuthorized } from '@/components/NotAuthorized'
 import { AppShell } from '@/components/AppShell'
+import { NotificationListener } from '@/components/NotificationListener'
 import { HomePage } from '@/pages/HomePage'
 import { AddTransactionPage } from '@/pages/AddTransactionPage'
 import { EditTransactionPage } from '@/pages/EditTransactionPage'
@@ -42,6 +43,7 @@ function Gate() {
 
   return (
     <DataProvider>
+      <NotificationListener />
       <BrowserRouter>
         <Routes>
           <Route element={<AppShell />}>

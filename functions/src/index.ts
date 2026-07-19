@@ -5,5 +5,5 @@ initializeApp()
 export { dailyRecurring, materializeRecurringNow } from './recurring'
 export { scanReceipt } from './ai'
 export { dailyBigQuerySync, syncBigQueryNow } from './reporting'
-export { onTransactionWrite } from './notifications'
+export { onTransactionWrite, sendTestNotification } from './notifications'
 export { exportAuditZip } from './exports'
