@@ -1,7 +1,7 @@
 import { categoryIcon } from '@/lib/categories'
 import { formatCurrency } from '@/lib/money'
 import { formatDatePretty } from '@/lib/fiscal'
-import { signedAmount, TYPE_LABELS, type Transaction } from '@/lib/types'
+import { isReimbursed, signedAmount, TYPE_LABELS, type Transaction } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 export function TransactionRow({
@@ -14,7 +14,7 @@ export function TransactionRow({
   const Icon = categoryIcon(t.category)
   const signed = signedAmount(t)
   const pos = signed >= 0
-  const reimbursed = t.hsa && !!t.hsaReimbursedDate
+  const reimbursed = t.hsa && isReimbursed(t)
 
   return (
     <button

@@ -46,3 +46,7 @@ coverage/
 Thumbs.db
 .idea/
 *.log
+
+# Personal testing screenshots (local only)
+/screenshots/
+.playwright-mcp/

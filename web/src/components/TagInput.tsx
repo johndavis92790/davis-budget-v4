@@ -11,6 +11,7 @@ export function TagInput({
   suggestions: string[]
 }) {
   const [input, setInput] = useState('')
+  const [focused, setFocused] = useState(false)
 
   const add = (raw: string) => {
     const v = raw.trim().replace(/,$/, '').trim()
@@ -30,15 +31,14 @@ export function TagInput({
     }
   }
 
-  const filtered = input
-    ? suggestions
-        .filter(
-          (s) =>
-            s.toLowerCase().includes(input.toLowerCase()) &&
-            !value.some((v) => v.toLowerCase() === s.toLowerCase()),
-        )
-        .slice(0, 6)
-    : []
+  const q = input.trim().toLowerCase()
+  const available = suggestions.filter(
+    (s) => !value.some((v) => v.toLowerCase() === s.toLowerCase()),
+  )
+  const filtered = (
+    q ? available.filter((s) => s.toLowerCase().includes(q)) : available
+  ).slice(0, 10)
+  const showList = focused && filtered.length > 0
 
   return (
     <div className="relative">
@@ -63,13 +63,21 @@ export function TagInput({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
-          onBlur={() => input.trim() && add(input)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            setFocused(false)
+            if (input.trim()) add(input)
+          }}
           placeholder={value.length ? '' : 'Add tags…'}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
           className="min-w-[80px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         />
       </div>
-      {filtered.length > 0 && (
-        <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border border-border bg-popover shadow-md">
+      {showList && (
+        <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-border bg-popover shadow-md">
           {filtered.map((s) => (
             <button
               key={s}

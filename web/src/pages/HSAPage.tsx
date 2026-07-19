@@ -22,7 +22,7 @@ import { exportAuditZipFn } from '@/lib/functions'
 import { formatCurrency, parseCurrency, roundMoney, sumMoney } from '@/lib/money'
 import { formatDatePretty, todayIso } from '@/lib/fiscal'
 import { downloadCsv } from '@/lib/export'
-import type { Transaction } from '@/lib/types'
+import { isReimbursed, type Transaction } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 function eligibleOf(t: Transaction) {
@@ -42,8 +42,8 @@ export function HSAPage() {
 
   const { hsa, unreimbursed, reimbursed, stats } = useMemo(() => {
     const hsa = transactions.filter((t) => t.hsa)
-    const unreimbursed = hsa.filter((t) => !t.hsaReimbursedDate)
-    const reimbursed = hsa.filter((t) => t.hsaReimbursedDate)
+    const unreimbursed = hsa.filter((t) => !isReimbursed(t))
+    const reimbursed = hsa.filter((t) => isReimbursed(t))
     const stats = {
       total: sumMoney(hsa.map((t) => t.amount)),
       count: hsa.length,
@@ -252,8 +252,10 @@ export function HSAPage() {
                       <div className="mt-1 truncate text-sm">{t.description}</div>
                     )}
                     <div className="text-xs text-pos">
-                      Reimbursed {formatCurrency(eligibleOf(t))} ·{' '}
-                      {t.hsaReimbursedDate && formatDatePretty(t.hsaReimbursedDate)}
+                      Reimbursed {formatCurrency(eligibleOf(t))}
+                      {t.hsaReimbursedDate
+                        ? ` · ${formatDatePretty(t.hsaReimbursedDate)}`
+                        : ''}
                     </div>
                   </div>
                   <span className="tabular shrink-0 text-sm text-muted-foreground">

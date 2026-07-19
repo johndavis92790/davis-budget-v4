@@ -31,10 +31,11 @@ import {
   addRefundForExpense,
   deleteTransaction,
   undoReimbursement,
+  clearHsaReimbursement,
 } from '@/lib/db'
 import { parseCurrency, formatCurrency } from '@/lib/money'
 import { todayIso, formatDatePretty } from '@/lib/fiscal'
-import { TYPE_LABELS } from '@/lib/types'
+import { isReimbursed, TYPE_LABELS } from '@/lib/types'
 
 export function EditTransactionPage() {
   const { id } = useParams()
@@ -92,6 +93,11 @@ export function EditTransactionPage() {
     toast.success('Reimbursement undone')
   }
 
+  async function markNotReimbursed() {
+    await clearHsaReimbursement(t!.id)
+    toast.success('Marked as not reimbursed')
+  }
+
   return (
     <div className="space-y-5">
       <button
@@ -110,25 +116,25 @@ export function EditTransactionPage() {
 
       <ReceiptsSection transactionId={t.id} />
 
-      {t.hsa && t.hsaReimbursedDate && (
+      {t.hsa && isReimbursed(t) && (
         <div className="rounded-xl bg-pos/10 px-4 py-3 text-sm">
           <div className="font-medium text-pos">
             Reimbursed {formatCurrency(t.hsaReimbursedAmount ?? t.amount)}
           </div>
           <div className="text-xs text-muted-foreground">
-            on {formatDatePretty(t.hsaReimbursedDate)}
+            {t.hsaReimbursedDate
+              ? `on ${formatDatePretty(t.hsaReimbursedDate)}`
+              : 'date not recorded'}
           </div>
-          {reimbursement && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={undoReimb}
-              className="mt-1 h-7 gap-1 px-2 text-xs text-muted-foreground"
-            >
-              <Undo2 className="size-3" />
-              Undo reimbursement
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={reimbursement ? undoReimb : markNotReimbursed}
+            className="mt-1 h-7 gap-1 px-2 text-xs text-muted-foreground"
+          >
+            <Undo2 className="size-3" />
+            {reimbursement ? 'Undo reimbursement' : 'Mark as not reimbursed'}
+          </Button>
         </div>
       )}
 
