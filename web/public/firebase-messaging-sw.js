@@ -31,5 +31,10 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(clients.openWindow('/'))
 })
 
+// Take control immediately so Chrome sees an active, controlling worker
+// (required for the app to be installable, not just "add shortcut").
+self.addEventListener('install', () => self.skipWaiting())
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()))
+
 // No-op fetch handler so the app meets PWA installability criteria.
 self.addEventListener('fetch', () => {})
