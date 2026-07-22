@@ -13,10 +13,10 @@ import {
   Bell,
   Users,
   LogOut,
-  Wallet,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/utils'
+import { DLogo } from './DLogo'
 
 const NAV = [
   { to: '/', label: 'Home', icon: Home, end: true },
@@ -55,7 +55,7 @@ export function AppShell() {
           <Menu className="size-5" />
         </button>
         <div className="flex items-center gap-2">
-          <Wallet className="size-5 text-primary" />
+          <DLogo className="size-6" />
           <span className="font-semibold tracking-tight">Davis Budget</span>
         </div>
       </header>
@@ -69,7 +69,7 @@ export function AppShell() {
           <nav className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col border-r border-border bg-card animate-in slide-in-from-left">
             <div className="flex h-14 items-center justify-between border-b border-border px-4">
               <div className="flex items-center gap-2">
-                <Wallet className="size-5 text-primary" />
+                <DLogo className="size-6" />
                 <span className="font-semibold">Davis Budget</span>
               </div>
               <button

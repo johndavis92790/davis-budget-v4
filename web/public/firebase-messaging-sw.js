@@ -20,8 +20,8 @@ messaging.onBackgroundMessage((payload) => {
   const d = payload.data || {}
   self.registration.showNotification(d.title || 'Davis Budget', {
     body: d.body || '',
-    icon: '/favicon.svg',
-    badge: '/favicon.svg',
+    icon: '/pwa-192.png',
+    badge: '/pwa-192.png',
     data: d,
   })
 })
@@ -30,3 +30,6 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   event.waitUntil(clients.openWindow('/'))
 })
+
+// No-op fetch handler so the app meets PWA installability criteria.
+self.addEventListener('fetch', () => {})
