@@ -38,11 +38,11 @@ export const sendTestNotification = onCall({ region: REGION }, async (req) => {
 
   const res = await getMessaging().sendEachForMulticast({
     tokens,
-    notification: {
+    data: {
       title: 'Davis Budget',
       body: "Test notification — you're all set! 🎉",
+      link: '/',
     },
-    webpush: { fcmOptions: { link: '/' } },
   })
   await pruneStale(tokens, res.responses)
   return { sent: res.successCount }
@@ -82,10 +82,11 @@ export const onTransactionWrite = onDocumentWritten(
       docData.description ? ` — ${docData.description}` : ''
     }`
 
+    // Data-only payload: our SW/foreground handler displays it exactly once
+    // (a `notification` payload would also auto-display → duplicate).
     const res = await getMessaging().sendEachForMulticast({
       tokens,
-      notification: { title, body },
-      webpush: { fcmOptions: { link: '/' } },
+      data: { title, body, link: '/' },
     })
 
     // Clean up tokens that are no longer valid.

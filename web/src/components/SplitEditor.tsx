@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { CategorySelect } from './CategorySelect'
+import { TagInput } from './TagInput'
+import { useData } from '@/lib/data'
 import { parseCurrency, formatCurrency, sumMoney, roundMoney } from '@/lib/money'
 
 export type SplitRow = {
@@ -13,15 +15,23 @@ export type SplitRow = {
   amount: string
   category: string
   hsa: boolean
+  tags: string[]
 }
 export type ParsedSplit = {
   category: string
   amount: number
   description: string
   hsa: boolean
+  tags: string[]
 }
 
-const BLANK: SplitRow = { description: '', amount: '', category: '', hsa: false }
+const blank = (): SplitRow => ({
+  description: '',
+  amount: '',
+  category: '',
+  hsa: false,
+  tags: [],
+})
 
 export function SplitEditor({
   initialRows,
@@ -40,8 +50,9 @@ export function SplitEditor({
   saving?: boolean
   compareTotal?: number
 }) {
+  const { tags: allTags } = useData()
   const [rows, setRows] = useState<SplitRow[]>(
-    initialRows.length ? initialRows : [BLANK],
+    initialRows.length ? initialRows : [blank()],
   )
 
   const total = sumMoney(rows.map((r) => parseCurrency(r.amount)))
@@ -60,6 +71,7 @@ export function SplitEditor({
         amount: parseCurrency(r.amount),
         description: r.description.trim(),
         hsa: r.hsa,
+        tags: r.tags,
       }))
       .filter((r) => r.amount > 0 && r.category)
     if (!parsed.length) {
@@ -118,6 +130,11 @@ export function SplitEditor({
             placeholder="Description"
             className="h-9"
           />
+          <TagInput
+            value={it.tags}
+            onChange={(tags) => update(i, { tags })}
+            suggestions={allTags}
+          />
           <label className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">HSA eligible</span>
             <Switch
@@ -131,7 +148,7 @@ export function SplitEditor({
       <Button
         variant="outline"
         className="w-full"
-        onClick={() => setRows((s) => [...s, { ...BLANK }])}
+        onClick={() => setRows((s) => [...s, blank()])}
       >
         <Plus className="size-4" />
         Add category

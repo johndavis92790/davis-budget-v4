@@ -6,8 +6,10 @@ import {
   Loader2,
   Sparkles,
   SplitSquareVertical,
+  Undo2,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
 import { TransactionForm } from '@/components/TransactionForm'
 import {
   SplitEditor,
@@ -25,7 +27,10 @@ import type { Transaction } from '@/lib/types'
 type Step = 'capture' | 'scanning' | 'review' | 'split'
 
 /** Collapse AI line items into one row per category (+ HSA group), summing amounts. */
-function groupLineItems(items: ScanLineItem[]): SplitRow[] {
+function groupLineItems(
+  items: ScanLineItem[],
+  defaultTags: string[],
+): SplitRow[] {
   const map = new Map<
     string,
     { category: string; hsa: boolean; amount: number; descs: string[] }
@@ -49,6 +54,7 @@ function groupLineItems(items: ScanLineItem[]): SplitRow[] {
     description:
       g.descs.slice(0, 4).join(', ') +
       (g.descs.length > 4 ? `, +${g.descs.length - 4} more` : ''),
+    tags: [...defaultTags],
   }))
 }
 
@@ -69,8 +75,17 @@ export function ScanPage() {
     try {
       const imageBase64 = await fileToBase64(f)
       const res = await scanReceiptFn({ imageBase64, mimeType: f.type })
-      setResult(res.data)
-      setStep('review')
+      const data = res.data
+      setResult(data)
+      // If the receipt spans multiple categories, jump straight to the split view.
+      const groups = groupLineItems(data.lineItems ?? [], data.tags ?? [])
+      if (groups.length >= 2) {
+        setSplitRows(groups)
+        setSplitDate(data.date || todayIso())
+        setStep('split')
+      } else {
+        setStep('review')
+      }
     } catch (e) {
       console.error(e)
       toast.error('Could not scan. Try again or add it manually.')
@@ -89,8 +104,22 @@ export function ScanPage() {
     nav('/')
   }
 
-  function startSplit() {
-    setSplitRows(groupLineItems(result?.lineItems ?? []))
+  // review → split (manual split even when AI didn't detect categories)
+  function toSplit() {
+    const groups = groupLineItems(result?.lineItems ?? [], result?.tags ?? [])
+    setSplitRows(
+      groups.length
+        ? groups
+        : [
+            {
+              category: result?.category ?? '',
+              amount: result?.amount ? String(result.amount) : '',
+              description: result?.description ?? '',
+              hsa: !!result?.hsa,
+              tags: result?.tags ?? [],
+            },
+          ],
+    )
     setSplitDate(result?.date || todayIso())
     setStep('split')
   }
@@ -105,7 +134,7 @@ export function ScanPage() {
             date: splitDate,
             type: 'expense',
             category: r.category,
-            tags: result?.tags ?? [],
+            tags: r.tags,
             amount: r.amount,
             description: r.description,
             hsa: r.hsa,
@@ -143,8 +172,6 @@ export function ScanPage() {
         hsa: !!result.hsa,
       }
     : undefined
-
-  const lineGroups = groupLineItems(result?.lineItems ?? [])
 
   return (
     <div className="space-y-5 pb-6">
@@ -207,24 +234,16 @@ export function ScanPage() {
             <span>Review the details AI pulled from your receipt, then save.</span>
           </div>
 
-          {lineGroups.length >= 2 && (
-            <button
-              type="button"
-              onClick={startSplit}
-              className="flex w-full items-center gap-3 rounded-xl border border-border px-4 py-3 text-left transition-colors hover:bg-accent/40"
-            >
-              <SplitSquareVertical className="size-5 text-primary" />
-              <div className="flex-1">
-                <div className="text-sm font-medium">
-                  This receipt spans {lineGroups.length} categories
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Split into separate transactions (
-                  {lineGroups.map((g) => g.category).join(', ')})
-                </div>
-              </div>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={toSplit}
+            className="flex w-full items-center gap-3 rounded-xl border border-border px-4 py-3 text-left transition-colors hover:bg-accent/40"
+          >
+            <SplitSquareVertical className="size-5 text-primary" />
+            <div className="flex-1 text-sm font-medium">
+              Split into multiple categories
+            </div>
+          </button>
 
           <TransactionForm mode="add" initial={initial} onSaved={afterSingleSave} />
         </div>
@@ -232,7 +251,22 @@ export function ScanPage() {
 
       {step === 'split' && (
         <div className="space-y-4">
-          <h1 className="text-lg font-semibold">Split receipt</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg font-semibold">Split receipt</h1>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setStep('review')}
+              className="gap-1 text-muted-foreground"
+            >
+              <Undo2 className="size-4" />
+              Keep as one
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            AI split this receipt by category. Adjust anything, or tap “Keep as
+            one” to save it as a single transaction.
+          </p>
           <SplitEditor
             initialRows={splitRows}
             date={splitDate}

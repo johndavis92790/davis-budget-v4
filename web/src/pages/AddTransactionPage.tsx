@@ -26,7 +26,7 @@ export function AddTransactionPage() {
             date,
             type: 'expense',
             category: r.category,
-            tags: [],
+            tags: r.tags,
             amount: r.amount,
             description: r.description,
             hsa: r.hsa,

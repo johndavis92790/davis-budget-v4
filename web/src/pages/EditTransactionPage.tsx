@@ -119,7 +119,7 @@ export function EditTransactionPage() {
             date: splitDate,
             type: 'expense',
             category: r.category,
-            tags: t!.tags ?? [],
+            tags: r.tags,
             amount: r.amount,
             description: r.description,
             hsa: r.hsa,
@@ -163,6 +163,7 @@ export function EditTransactionPage() {
               amount: String(t.amount),
               description: t.description,
               hsa: !!t.hsa,
+              tags: t.tags ?? [],
             },
           ]}
           date={splitDate}

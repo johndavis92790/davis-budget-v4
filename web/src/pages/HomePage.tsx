@@ -81,19 +81,19 @@ export function HomePage() {
 
       <div className="flex gap-3">
         <Button
-          onClick={() => nav('/add')}
-          className="h-11 flex-1 gap-2 text-base"
+          onClick={() => nav('/scan')}
+          className="h-12 flex-1 gap-2 text-base"
         >
-          <Plus className="size-5" />
-          Add expense
+          <ScanLine className="size-5" />
+          Scan receipt
         </Button>
         <Button
           variant="secondary"
-          onClick={() => nav('/scan')}
-          className="h-11 gap-2 text-base"
+          onClick={() => nav('/add')}
+          className="h-12 gap-2 text-base"
         >
-          <ScanLine className="size-5" />
-          Scan
+          <Plus className="size-5" />
+          Add
         </Button>
       </div>
 

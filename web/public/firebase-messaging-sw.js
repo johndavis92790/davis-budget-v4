@@ -17,12 +17,12 @@ firebase.initializeApp({
 const messaging = firebase.messaging()
 
 messaging.onBackgroundMessage((payload) => {
-  const n = payload.notification || {}
-  self.registration.showNotification(n.title || 'Davis Budget', {
-    body: n.body || '',
+  const d = payload.data || {}
+  self.registration.showNotification(d.title || 'Davis Budget', {
+    body: d.body || '',
     icon: '/favicon.svg',
     badge: '/favicon.svg',
-    data: payload.data || {},
+    data: d,
   })
 })
 
