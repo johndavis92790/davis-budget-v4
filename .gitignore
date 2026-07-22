@@ -33,7 +33,7 @@ firebase-export-*/
 node_modules/
 dist/
 build/
-lib/
+/functions/lib/
 coverage/
 *.tsbuildinfo
 .vite/
