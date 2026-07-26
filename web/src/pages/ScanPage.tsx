@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -19,6 +19,7 @@ import {
 import { useAuth } from '@/lib/auth'
 import { scanReceiptFn, type ScanResult, type ScanLineItem } from '@/lib/functions'
 import { uploadReceipt, fileToBase64 } from '@/lib/receipts'
+import { takePendingScanFile } from '@/lib/scanHandoff'
 import { addTransaction } from '@/lib/db'
 import { roundMoney } from '@/lib/money'
 import { todayIso } from '@/lib/fiscal'
@@ -68,6 +69,14 @@ export function ScanPage() {
   const [saving, setSaving] = useState(false)
   const [splitRows, setSplitRows] = useState<SplitRow[]>([])
   const [splitDate, setSplitDate] = useState(todayIso())
+
+  // If we arrived from the Home "Scan" button, a file was already chosen —
+  // start scanning immediately instead of showing a redundant capture screen.
+  useEffect(() => {
+    const f = takePendingScanFile()
+    if (f) onFile(f)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function onFile(f: File) {
     setFile(f)
@@ -188,7 +197,6 @@ export function ScanPage() {
         ref={fileRef}
         type="file"
         accept="image/*,application/pdf"
-        capture="environment"
         className="hidden"
         onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
       />

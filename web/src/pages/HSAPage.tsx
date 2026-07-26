@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, Download, Loader2 } from 'lucide-react'
+import { Check, ChevronRight, Download, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -179,7 +179,7 @@ export function HSAPage() {
             <h2 className="text-base font-semibold">
               Unreimbursed{' '}
               <span className="text-sm font-normal text-muted-foreground">
-                — tap to select
+                — tap to select, arrow to open
               </span>
             </h2>
             {unreimbursed.length === 0 && (
@@ -191,43 +191,55 @@ export function HSAPage() {
               const isSel = selected.has(t.id)
               const Icon = categoryIcon(t.category)
               return (
-                <button
+                <div
                   key={t.id}
-                  type="button"
-                  onClick={() => toggle(t.id)}
                   className={cn(
-                    'flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors',
+                    'flex items-center rounded-xl border transition-colors',
                     isSel
                       ? 'border-primary/50 bg-primary/5'
                       : 'border-transparent bg-card hover:bg-accent/50',
                   )}
                 >
-                  <div
-                    className={cn(
-                      'flex size-5 shrink-0 items-center justify-center rounded border',
-                      isSel
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-muted-foreground/40',
-                    )}
+                  <button
+                    type="button"
+                    onClick={() => toggle(t.id)}
+                    className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4 text-left"
                   >
-                    {isSel && <Check className="size-3.5" />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium">
-                      <Icon className="size-3.5" />
-                      {t.category}
-                    </span>
-                    {t.description && (
-                      <div className="mt-1 truncate text-sm">{t.description}</div>
-                    )}
-                    <div className="text-xs text-muted-foreground">
-                      {formatDatePretty(t.date)}
+                    <div
+                      className={cn(
+                        'flex size-5 shrink-0 items-center justify-center rounded border',
+                        isSel
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-muted-foreground/40',
+                      )}
+                    >
+                      {isSel && <Check className="size-3.5" />}
                     </div>
-                  </div>
-                  <span className="tabular shrink-0 font-semibold text-neg">
-                    {formatCurrency(t.amount)}
-                  </span>
-                </button>
+                    <div className="min-w-0 flex-1">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium">
+                        <Icon className="size-3.5" />
+                        {t.category}
+                      </span>
+                      {t.description && (
+                        <div className="mt-1 truncate text-sm">{t.description}</div>
+                      )}
+                      <div className="text-xs text-muted-foreground">
+                        {formatDatePretty(t.date)}
+                      </div>
+                    </div>
+                    <span className="tabular shrink-0 font-semibold text-neg">
+                      {formatCurrency(t.amount)}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => nav(`/edit/${t.id}`)}
+                    aria-label="View or edit details"
+                    className="flex shrink-0 items-center self-stretch px-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <ChevronRight className="size-5" />
+                  </button>
+                </div>
               )
             })}
           </section>

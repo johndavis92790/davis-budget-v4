@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, ScanLine, ChevronRight, Loader2, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,19 +8,21 @@ import { useData } from '@/lib/data'
 import { availableFunds, weekNetSpend } from '@/lib/compute'
 import { roundMoney, formatCurrency } from '@/lib/money'
 import { getFiscal, todayIso } from '@/lib/fiscal'
+import { setPendingScanFile } from '@/lib/scanHandoff'
 import { cn } from '@/lib/utils'
 
 export function HomePage() {
   const nav = useNavigate()
   const { transactions, ledgerAnchor, weeklyGoals, loading } = useData()
   const [goalsOpen, setGoalsOpen] = useState(false)
+  const scanInputRef = useRef<HTMLInputElement>(null)
 
   const week = getFiscal(todayIso())
   const available = availableFunds(transactions, ledgerAnchor)
   const target = weeklyGoals[week.weekKey]?.target ?? 0
   const spent = weekNetSpend(transactions, week.weekKey)
   const weeklyRemaining = roundMoney(target - spent)
-  const recent = transactions.slice(0, 8)
+  const recent = transactions.slice(0, 50)
 
   return (
     <div className="space-y-5">
@@ -80,8 +82,21 @@ export function HomePage() {
       </div>
 
       <div className="flex gap-3">
+        <input
+          ref={scanInputRef}
+          type="file"
+          accept="image/*,application/pdf"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) {
+              setPendingScanFile(f)
+              nav('/scan')
+            }
+          }}
+        />
         <Button
-          onClick={() => nav('/scan')}
+          onClick={() => scanInputRef.current?.click()}
           className="h-12 flex-1 gap-2 text-base"
         >
           <ScanLine className="size-5" />

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Loader2, Paperclip, FileText, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +11,7 @@ import { TagInput } from './TagInput'
 import { useAuth } from '@/lib/auth'
 import { useData } from '@/lib/data'
 import { addTransaction, updateTransaction } from '@/lib/db'
+import { uploadReceipt } from '@/lib/receipts'
 import { parseCurrency } from '@/lib/money'
 import { todayIso } from '@/lib/fiscal'
 import { TYPE_LABELS, type Transaction, type TransactionType } from '@/lib/types'
@@ -43,6 +44,8 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
   const [tags, setTags] = useState<string[]>(initial?.tags ?? [])
   const [hsa, setHsa] = useState(initial?.hsa ?? false)
   const [saving, setSaving] = useState(false)
+  const [receipts, setReceipts] = useState<File[]>([])
+  const receiptRef = useRef<HTMLInputElement>(null)
 
   const finalType: TransactionType = lockedType ?? kind
   const isExpense = finalType === 'expense' || finalType === 'recurring-expense'
@@ -71,6 +74,15 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
       let newId: string | undefined
       if (mode === 'add') {
         newId = await addTransaction(payload, user?.email ?? undefined)
+        if (newId && receipts.length) {
+          await Promise.all(
+            receipts.map((f) =>
+              uploadReceipt(newId as string, f).catch((err) =>
+                console.error('receipt upload failed', err),
+              ),
+            ),
+          )
+        }
         toast.success('Added')
       } else if (initial?.id) {
         await updateTransaction(initial.id, payload)
@@ -169,6 +181,53 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
             </div>
           </div>
           <Switch checked={hsa} onCheckedChange={setHsa} />
+        </div>
+      )}
+
+      {mode === 'add' && (
+        <div className="space-y-1.5">
+          <Label>Receipts</Label>
+          <input
+            ref={receiptRef}
+            type="file"
+            accept="image/*,application/pdf"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              const fs = Array.from(e.target.files ?? [])
+              if (fs.length) setReceipts((r) => [...r, ...fs])
+              e.target.value = ''
+            }}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            {receipts.map((f, i) => (
+              <span
+                key={i}
+                className="flex items-center gap-1 rounded-md bg-secondary px-2 py-1 text-xs"
+              >
+                <FileText className="size-3.5 shrink-0" />
+                <span className="max-w-[9rem] truncate">{f.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setReceipts((r) => r.filter((_, j) => j !== i))}
+                  aria-label="Remove receipt"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </span>
+            ))}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => receiptRef.current?.click()}
+              className="gap-1"
+            >
+              <Paperclip className="size-4" />
+              Attach
+            </Button>
+          </div>
         </div>
       )}
 

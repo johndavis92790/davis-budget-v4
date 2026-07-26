@@ -77,7 +77,7 @@ export function CalendarPage() {
     <div className="space-y-4">
       <h1 className="text-xl font-semibold tracking-tight">Calendar</h1>
 
-      <div className="flex items-center justify-between rounded-xl bg-card px-2 py-2">
+      <div className="flex items-center justify-between rounded-xl bg-card py-2 pl-2 pr-4">
         <button
           type="button"
           onClick={() => shiftMonth(-1)}
