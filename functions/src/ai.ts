@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
+import { getFirestore } from 'firebase-admin/firestore'
 import { GoogleGenAI, Type } from '@google/genai'
 import { assertAllowed } from './lib/auth'
 import { CATEGORY_NAMES } from './lib/categories'
@@ -51,6 +52,14 @@ export const scanReceipt = onCall(
     })
     const today = denverToday()
 
+    // Existing tags from Firestore, so the model reuses them instead of
+    // inventing near-duplicates. Dynamic (grows over time), so fetched per call.
+    const tagsSnap = await getFirestore().collection('tags').get()
+    const TAG_NAMES = tagsSnap.docs
+      .map((d) => (d.data() as { name?: string }).name)
+      .filter((n): n is string => !!n)
+      .sort((a, b) => a.localeCompare(b))
+
     const prompt = `You extract structured data from a receipt or purchase screenshot for a family budget app. Today is ${today}.
 
 Return JSON matching the provided schema:
@@ -58,9 +67,9 @@ Return JSON matching the provided schema:
 - amount: the TOTAL paid as a positive number (grand total including tax), no currency symbol.
 - date: the transaction date on the receipt as YYYY-MM-DD. If not visible, use ${today}.
 - category: the single best fit from this exact list: ${CATEGORY_NAMES.join(', ')}. Guidance: Costco→"Costco", grocery stores→"Groceries", fuel→"Gas", restaurants/fast food→"Dining", pharmacy/medical/dental/vision→"Health", home goods→"House", phone/electronics→"Phones". If unsure use "Other".
-- description: a short human description like "Smiths groceries" or "Chevron fuel".
+- description: a short human description but only if the combination of the category and the tags don't make it obvious what it is. For example: if the category is "Grocceries" and one of the tags is "Walmart", then a description might not be needed. 
 - merchant: the store or vendor name.
-- tags: 0-4 short tags (brand, store, or purpose), e.g. "Amazon", "Costco".
+- tags: 0-4 short tags, try and use what is already in this list of tags: ${TAG_NAMES.join(', ')}. Only use a new one if you feel its important, I don't want to exponentially increase how many tags we have.
 - hsa: true ONLY if this is a likely HSA-eligible medical expense (prescriptions, copays, medical supplies, dental, vision, clinics). Otherwise false.
 - lineItems: include ONLY when the receipt spans MULTIPLE categories (e.g. a store run with both food and clothes), or mixes HSA-eligible with non-eligible items. Return ONE entry PER category group — NOT one per product. Each entry's amount is that group's combined subtotal INCLUDING its proportional share of tax/fees, so the lineItems amounts add up to the grand total. description briefly lists what's in that group (e.g. "Milk, bread, bananas"). If the whole receipt is a single category, return an empty array.
 
