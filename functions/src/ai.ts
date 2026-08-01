@@ -7,6 +7,10 @@ import { denverToday } from './lib/fiscal'
 
 const REGION = 'us-central1'
 const PROJECT = 'davis-budget-v4'
+// Gemini 3.x models are served only from the "global" Vertex endpoint (they
+// 404 in us-central1). The callable itself still runs in REGION.
+const AI_LOCATION = 'global'
+const MODEL = 'gemini-3.5-flash'
 
 const SCHEMA = {
   type: Type.OBJECT,
@@ -48,7 +52,7 @@ export const scanReceipt = onCall(
     const ai = new GoogleGenAI({
       vertexai: true,
       project: PROJECT,
-      location: REGION,
+      location: AI_LOCATION,
     })
     const today = denverToday()
 
@@ -76,7 +80,7 @@ Return JSON matching the provided schema:
 Respond with only the JSON.`
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: MODEL,
       contents: [
         {
           role: 'user',

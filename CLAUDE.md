@@ -118,7 +118,7 @@ Receipts: `web/src/lib/receipts.ts` (`uploadReceipt`, `listReceipts`,
 
 ### Cloud Functions — `functions/src/`
 - `recurring.ts`: `dailyRecurring` (scheduled 6am America/Denver) → `materializeMonth` creates `recurring-*` transactions for the current fiscal month (×12/13, income-then-expense largest-first, idempotent via `meta/materializations`); `materializeRecurringNow` (callable, manual/catch-up).
-- `ai.ts`: `scanReceipt` (callable) — Gemini 2.5 Flash on Vertex; returns extraction JSON (amount/date/category/description/tags/hsa + `lineItems` grouped one-per-category with tax allocated). Does NOT write; the client saves.
+- `ai.ts`: `scanReceipt` (callable) — Gemini 3.5 Flash on Vertex (`global` endpoint — 3.x models 404 in us-central1); returns extraction JSON (amount/date/category/description/tags/hsa + `lineItems` grouped one-per-category with tax allocated). Does NOT write; the client saves.
 - `reporting.ts`: `dailyBigQuerySync` (2am) + `syncBigQueryNow` (callable) — full `WRITE_TRUNCATE` refresh of `budget.transactions`.
 - `notifications.ts`: `onTransactionWrite` (Firestore trigger on `transactions/{id}`) → FCM push to OTHER users' tokens (skips `system`/`migration` actors, prunes dead tokens); `sendTestNotification` (callable → caller's own devices).
 - `exports.ts`: `exportAuditZip` (callable) — zips receipts + `manifest.csv` for a scope/year, uploads to `exports/`, returns the path (client fetches a download URL).
