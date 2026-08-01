@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { getFirestore } from 'firebase-admin/firestore'
-import { GoogleGenAI, Type } from '@google/genai'
+import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai'
 import { assertAllowed } from './lib/auth'
 import { CATEGORY_NAMES } from './lib/categories'
 import { denverToday } from './lib/fiscal'
@@ -94,6 +94,9 @@ Respond with only the JSON.`
         responseMimeType: 'application/json',
         responseSchema: SCHEMA,
         temperature: 0.1,
+        // Receipt extraction is simple; skip the model's "thinking" phase so
+        // scans stay fast (~1s vs ~3s). Bump to 'low' if accuracy ever slips.
+        thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
       },
     })
 
