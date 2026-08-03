@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronRight, Download, Loader2 } from 'lucide-react'
+import { Check, ChevronRight, Download, Loader2, Paperclip } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -223,7 +223,10 @@ export function HSAPage() {
                       {t.description && (
                         <div className="mt-1 truncate text-sm">{t.description}</div>
                       )}
-                      <div className="text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        {(t.receiptCount ?? 0) > 0 && (
+                          <Paperclip className="size-3" aria-label="Has receipt" />
+                        )}
                         {formatDatePretty(t.date)}
                       </div>
                     </div>
@@ -263,7 +266,10 @@ export function HSAPage() {
                     {t.description && (
                       <div className="mt-1 truncate text-sm">{t.description}</div>
                     )}
-                    <div className="text-xs text-pos">
+                    <div className="flex items-center gap-1 text-xs text-pos">
+                      {(t.receiptCount ?? 0) > 0 && (
+                        <Paperclip className="size-3" aria-label="Has receipt" />
+                      )}
                       Reimbursed {formatCurrency(eligibleOf(t))}
                       {t.hsaReimbursedDate
                         ? ` · ${formatDatePretty(t.hsaReimbursedDate)}`

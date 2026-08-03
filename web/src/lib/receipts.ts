@@ -6,7 +6,17 @@ import {
   listAll,
   deleteObject,
 } from 'firebase/storage'
-import { storage } from './firebase'
+import { doc, increment, updateDoc } from 'firebase/firestore'
+import { storage, db } from './firebase'
+
+/** Bumps transactions/{id}.receiptCount so rows can show a receipt indicator
+ * without a live Storage listing. Best-effort — a failure here shouldn't
+ * fail the upload/delete the user just performed. */
+function bumpReceiptCount(transactionId: string, delta: number) {
+  updateDoc(doc(db, 'transactions', transactionId), {
+    receiptCount: increment(delta),
+  }).catch((e) => console.error('receiptCount bump failed', e))
+}
 
 export interface ReceiptFile {
   path: string
@@ -25,6 +35,7 @@ export async function uploadReceipt(
   await uploadBytes(ref(storage, path), file, {
     contentType: (file as File).type || 'application/octet-stream',
   })
+  bumpReceiptCount(transactionId, 1)
   return path
 }
 
@@ -43,6 +54,9 @@ export async function listReceipts(
 
 export async function deleteReceipt(path: string): Promise<void> {
   await deleteObject(ref(storage, path))
+  // path is `receipts/{transactionId}/{filename}`
+  const transactionId = path.split('/')[1]
+  if (transactionId) bumpReceiptCount(transactionId, -1)
 }
 
 /** Copy every receipt from one transaction to another (used when splitting). */

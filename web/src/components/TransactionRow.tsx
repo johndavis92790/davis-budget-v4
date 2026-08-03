@@ -1,3 +1,4 @@
+import { Paperclip } from 'lucide-react'
 import { categoryIcon } from '@/lib/categories'
 import { formatCurrency } from '@/lib/money'
 import { formatDatePretty } from '@/lib/fiscal'
@@ -15,6 +16,7 @@ export function TransactionRow({
   const signed = signedAmount(t)
   const pos = signed >= 0
   const reimbursed = t.hsa && isReimbursed(t)
+  const hasReceipt = (t.receiptCount ?? 0) > 0
 
   return (
     <button
@@ -71,7 +73,10 @@ export function TransactionRow({
         >
           {formatCurrency(signed, { signed: true })}
         </span>
-        <span className="text-[11px] text-muted-foreground">
+        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+          {hasReceipt && (
+            <Paperclip className="size-3" aria-label="Has receipt" />
+          )}
           {formatDatePretty(t.date)}
         </span>
       </div>
