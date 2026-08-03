@@ -11,6 +11,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { getDownloadURL, ref } from 'firebase/storage'
 import { FileArchive } from 'lucide-react'
 import { categoryIcon } from '@/lib/categories'
@@ -39,21 +46,37 @@ export function HSAPage() {
   const [date, setDate] = useState(todayIso())
   const [saving, setSaving] = useState(false)
   const [zipping, setZipping] = useState(false)
+  const [year, setYear] = useState<string>('all')
+
+  const hsaAll = useMemo(() => transactions.filter((t) => t.hsa), [transactions])
+
+  // Calendar years present in the data (for tax-year filtering), not fiscal years.
+  const yearOptions = useMemo(
+    () => [...new Set(hsaAll.map((t) => t.date.slice(0, 4)))].sort().reverse(),
+    [hsaAll],
+  )
 
   const { hsa, unreimbursed, reimbursed, stats } = useMemo(() => {
-    const hsa = transactions.filter((t) => t.hsa)
+    const hsa =
+      year === 'all' ? hsaAll : hsaAll.filter((t) => t.date.startsWith(year))
     const unreimbursed = hsa.filter((t) => !isReimbursed(t))
     const reimbursed = hsa.filter((t) => isReimbursed(t))
+    // HSA-eligible dollars only — a transaction's full `amount` can include
+    // non-eligible spend bundled into one purchase; eligibleOf() is the
+    // amount that's actually HSA-relevant (the reimbursed amount once
+    // reimbursed, otherwise the recorded amount).
+    const outstanding = sumMoney(unreimbursed.map(eligibleOf))
+    const reimbursedTotal = sumMoney(reimbursed.map(eligibleOf))
     const stats = {
-      total: sumMoney(hsa.map((t) => t.amount)),
+      total: roundMoney(outstanding + reimbursedTotal),
       count: hsa.length,
-      reimbursedTotal: sumMoney(reimbursed.map(eligibleOf)),
+      reimbursedTotal,
       reimbursedCount: reimbursed.length,
-      outstanding: sumMoney(unreimbursed.map((t) => t.amount)),
+      outstanding,
       outstandingCount: unreimbursed.length,
     }
     return { hsa, unreimbursed, reimbursed, stats }
-  }, [transactions])
+  }, [hsaAll, year])
 
   const selectedList = unreimbursed.filter((t) => selected.has(t.id))
   const selectedTotal = sumMoney(selectedList.map((t) => t.amount))
@@ -106,13 +129,16 @@ export function HSAPage() {
         t.hsaReimbursedDate ? 'Yes' : 'No',
       ]),
     ]
-    downloadCsv(`hsa-expenses-${todayIso()}.csv`, rows)
+    downloadCsv(`hsa-expenses-${year === 'all' ? todayIso() : year}.csv`, rows)
   }
 
   async function exportZip() {
     setZipping(true)
     try {
-      const r = await exportAuditZipFn({ scope: 'hsa' })
+      const r = await exportAuditZipFn({
+        scope: 'hsa',
+        year: year === 'all' ? undefined : Number(year),
+      })
       const url = await getDownloadURL(ref(storage, r.data.path))
       window.open(url, '_blank')
       toast.success(
@@ -133,7 +159,28 @@ export function HSAPage() {
     <div className="space-y-5 pb-24">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold tracking-tight">HSA expenses</h1>
-        <Button variant="outline" size="sm" onClick={exportCsv} className="gap-2">
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Select value={year} onValueChange={setYear}>
+          <SelectTrigger className="flex-1">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All time</SelectItem>
+            {yearOptions.map((y) => (
+              <SelectItem key={y} value={y}>
+                {y}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={exportCsv}
+          className="shrink-0 gap-2"
+        >
           <Download className="size-4" />
           Export
         </Button>
@@ -167,6 +214,7 @@ export function HSAPage() {
           <FileArchive className="size-4" />
         )}
         Download audit package (receipts + manifest)
+        {year !== 'all' ? ` — ${year}` : ''}
       </Button>
 
       {loading ? (
