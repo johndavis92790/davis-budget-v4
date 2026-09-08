@@ -1,6 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronRight, Download, Loader2, Paperclip } from 'lucide-react'
+import {
+  Check,
+  ChevronRight,
+  Download,
+  Loader2,
+  Paperclip,
+  Search,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -53,6 +60,7 @@ export function HSAPage() {
   const [saving, setSaving] = useState(false)
   const [zipping, setZipping] = useState(false)
   const [year, setYear] = useState<string>('all')
+  const [q, setQ] = useState('')
 
   const hsaAll = useMemo(() => transactions.filter((t) => t.hsa), [transactions])
 
@@ -63,8 +71,15 @@ export function HSAPage() {
   )
 
   const { hsa, unreimbursed, reimbursed, stats } = useMemo(() => {
-    const hsa =
+    let hsa =
       year === 'all' ? hsaAll : hsaAll.filter((t) => t.date.startsWith(year))
+    const ql = q.trim().toLowerCase()
+    if (ql) {
+      hsa = hsa.filter((t) => {
+        const hay = `${t.description} ${t.category} ${t.tags.join(' ')} ${t.hsaNotes ?? ''}`.toLowerCase()
+        return hay.includes(ql)
+      })
+    }
     const unreimbursed = hsa.filter((t) => !isReimbursed(t))
     const reimbursed = hsa.filter((t) => isReimbursed(t))
     // HSA-eligible dollars only — a transaction's full `amount` can include
@@ -82,7 +97,7 @@ export function HSAPage() {
       outstandingCount: unreimbursed.length,
     }
     return { hsa, unreimbursed, reimbursed, stats }
-  }, [hsaAll, year])
+  }, [hsaAll, year, q])
 
   const selectedList = unreimbursed.filter((t) => selected.has(t.id))
   const selectedTotal = sumMoney(selectedList.map((t) => t.amount))
@@ -186,6 +201,16 @@ export function HSAPage() {
     <div className="space-y-5 pb-24">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold tracking-tight">HSA expenses</h1>
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search description, category, tags, notes…"
+          className="pl-9"
+        />
       </div>
 
       <div className="flex items-center gap-2">
