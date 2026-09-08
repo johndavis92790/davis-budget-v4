@@ -10,11 +10,16 @@ import { CategorySelect } from './CategorySelect'
 import { TagInput } from './TagInput'
 import { useAuth } from '@/lib/auth'
 import { useData } from '@/lib/data'
-import { addTransaction, updateTransaction } from '@/lib/db'
+import { addTransaction, updateTransaction, reimburseHsaExpenses } from '@/lib/db'
 import { uploadReceipt } from '@/lib/receipts'
-import { parseCurrency } from '@/lib/money'
+import { formatCurrency, parseCurrency } from '@/lib/money'
 import { todayIso } from '@/lib/fiscal'
-import { TYPE_LABELS, type Transaction, type TransactionType } from '@/lib/types'
+import {
+  isReimbursed,
+  TYPE_LABELS,
+  type Transaction,
+  type TransactionType,
+} from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -43,12 +48,22 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
   const [description, setDescription] = useState(initial?.description ?? '')
   const [tags, setTags] = useState<string[]>(initial?.tags ?? [])
   const [hsa, setHsa] = useState(initial?.hsa ?? false)
+  const [hsaNotes, setHsaNotes] = useState(initial?.hsaNotes ?? '')
+  const [reimbAmount, setReimbAmount] = useState(
+    initial?.hsaReimbursedAmount != null ? String(initial.hsaReimbursedAmount) : '',
+  )
+  const [reimbDate, setReimbDate] = useState(initial?.hsaReimbursedDate ?? todayIso())
   const [saving, setSaving] = useState(false)
   const [receipts, setReceipts] = useState<File[]>([])
   const receiptRef = useRef<HTMLInputElement>(null)
 
   const finalType: TransactionType = lockedType ?? kind
   const isExpense = finalType === 'expense' || finalType === 'recurring-expense'
+  // Already reimbursed (via the real "Reimburse from HSA" flow or migrated
+  // data) — editing that amount safely lives on the Edit page instead, so
+  // this form only offers the "reimburse now" fields for a fresh HSA item.
+  const alreadyReimbursed = isReimbursed(initial ?? {})
+  const showReimburseFields = isExpense && hsa && !alreadyReimbursed
 
   async function handleSave() {
     if (!category) {
@@ -58,6 +73,11 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
     const amt = parseCurrency(amount)
     if (amt <= 0) {
       toast.error('Enter an amount')
+      return
+    }
+    const reimbAmt = parseCurrency(reimbAmount)
+    if (showReimburseFields && reimbAmt > amt) {
+      toast.error("Reimbursed amount can't be more than the expense amount")
       return
     }
     setSaving(true)
@@ -70,6 +90,7 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
         amount: amt,
         description: description.trim(),
         hsa: isExpense ? hsa : false,
+        ...(isExpense && hsa ? { hsaNotes: hsaNotes.trim() || null } : {}),
       }
       let newId: string | undefined
       if (mode === 'add') {
@@ -83,10 +104,24 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
             ),
           )
         }
-        toast.success('Added')
       } else if (initial?.id) {
         await updateTransaction(initial.id, payload)
-        toast.success('Saved')
+      }
+      const savedId = mode === 'add' ? newId : initial?.id
+
+      // Reimburse now, if an amount was entered — creates the linked
+      // reimbursement income transaction so Available Funds updates too.
+      if (showReimburseFields && reimbAmt > 0 && savedId) {
+        await reimburseHsaExpenses(
+          [{ expense: { id: savedId } as Transaction, amount: reimbAmt }],
+          reimbDate || todayIso(),
+          user?.email ?? undefined,
+        )
+        toast.success(
+          `${mode === 'add' ? 'Added' : 'Saved'} and reimbursed ${formatCurrency(reimbAmt)}`,
+        )
+      } else {
+        toast.success(mode === 'add' ? 'Added' : 'Saved')
       }
       onSaved(newId)
     } catch (e) {
@@ -181,6 +216,68 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
             </div>
           </div>
           <Switch checked={hsa} onCheckedChange={setHsa} />
+        </div>
+      )}
+
+      {isExpense && hsa && (
+        <div className="space-y-1.5">
+          <Label>HSA notes</Label>
+          <Input
+            value={hsaNotes}
+            onChange={(e) => setHsaNotes(e.target.value)}
+            placeholder="What's HSA-eligible, e.g. “Children's Tylenol”"
+          />
+        </div>
+      )}
+
+      {showReimburseFields && (
+        <div className="space-y-3 rounded-xl bg-card px-4 py-3">
+          <div>
+            <div className="font-medium">Reimburse now</div>
+            <div className="text-xs text-muted-foreground">
+              Optional — leave blank to reimburse later from the HSA page.
+              If only part of this was HSA-eligible, enter that amount.
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Reimbursed amount</Label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  $
+                </span>
+                <Input
+                  inputMode="decimal"
+                  value={reimbAmount}
+                  onChange={(e) => setReimbAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="tabular pl-7"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Reimbursed date</Label>
+              <Input
+                type="date"
+                value={reimbDate}
+                onChange={(e) => setReimbDate(e.target.value)}
+                className="tabular"
+              />
+            </div>
+          </div>
+          {(() => {
+            const r = parseCurrency(reimbAmount)
+            const full = parseCurrency(amount)
+            if (r > 0 && full > 0 && r < full) {
+              return (
+                <p className="text-xs text-amber-500">
+                  {formatCurrency(full - r)} of this {formatCurrency(full)}{' '}
+                  total stays non-HSA — won&apos;t count as eligible.
+                </p>
+              )
+            }
+            return null
+          })()}
         </div>
       )}
 
