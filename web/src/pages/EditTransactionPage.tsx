@@ -34,10 +34,11 @@ import {
   deleteTransaction,
   undoReimbursement,
   clearHsaReimbursement,
+  updateTransaction,
 } from '@/lib/db'
 import { copyReceipts } from '@/lib/receipts'
 import { parseCurrency, formatCurrency } from '@/lib/money'
-import { todayIso, formatDatePretty } from '@/lib/fiscal'
+import { todayIso } from '@/lib/fiscal'
 import { isReimbursed, TYPE_LABELS } from '@/lib/types'
 
 export function EditTransactionPage() {
@@ -102,6 +103,14 @@ export function EditTransactionPage() {
   async function markNotReimbursed() {
     await clearHsaReimbursement(t!.id)
     toast.success('Marked as not reimbursed')
+  }
+
+  async function setReimbDate(value: string) {
+    try {
+      await updateTransaction(t!.id, { hsaReimbursedDate: value || null })
+    } catch {
+      toast.error('Could not update the reimbursed date')
+    }
   }
 
   function openSplit() {
@@ -199,10 +208,16 @@ export function EditTransactionPage() {
           <div className="font-medium text-pos">
             Reimbursed {formatCurrency(t.hsaReimbursedAmount ?? t.amount)}
           </div>
-          <div className="text-xs text-muted-foreground">
-            {t.hsaReimbursedDate
-              ? `on ${formatDatePretty(t.hsaReimbursedDate)}`
-              : 'date not recorded'}
+          <div className="mt-1.5 space-y-1">
+            <Label className="text-xs text-muted-foreground">
+              Reimbursed date
+            </Label>
+            <Input
+              type="date"
+              value={t.hsaReimbursedDate ?? ''}
+              onChange={(e) => setReimbDate(e.target.value)}
+              className="tabular h-8 w-40 text-xs"
+            />
           </div>
           <Button
             variant="ghost"

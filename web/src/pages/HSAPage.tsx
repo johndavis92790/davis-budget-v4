@@ -23,7 +23,7 @@ import { FileArchive } from 'lucide-react'
 import { categoryIcon } from '@/lib/categories'
 import { useAuth } from '@/lib/auth'
 import { useData } from '@/lib/data'
-import { reimburseHsaExpenses } from '@/lib/db'
+import { reimburseHsaExpenses, updateTransaction } from '@/lib/db'
 import { storage } from '@/lib/firebase'
 import { exportAuditZipFn } from '@/lib/functions'
 import { formatCurrency, parseCurrency, roundMoney, sumMoney } from '@/lib/money'
@@ -87,6 +87,14 @@ export function HSAPage() {
       next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
+  }
+
+  async function setReimbDate(id: string, value: string) {
+    try {
+      await updateTransaction(id, { hsaReimbursedDate: value || null })
+    } catch {
+      toast.error('Could not update the reimbursed date')
+    }
   }
 
   function openReimburse() {
@@ -300,37 +308,47 @@ export function HSAPage() {
             {reimbursed.map((t) => {
               const Icon = categoryIcon(t.category)
               return (
-                <button
+                <div
                   key={t.id}
-                  type="button"
-                  onClick={() => nav(`/edit/${t.id}`)}
-                  className="flex w-full items-center gap-3 rounded-xl bg-card px-4 py-3 text-left opacity-80 transition-colors hover:bg-accent/50"
+                  className="rounded-xl bg-card px-4 py-3 opacity-90 transition-colors hover:bg-accent/50"
                 >
-                  <div className="min-w-0 flex-1">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium">
-                      <Icon className="size-3.5" />
-                      {t.category}
-                    </span>
-                    {t.description && (
-                      <div className="mt-1 truncate text-sm">{t.description}</div>
-                    )}
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      {(t.receiptCount ?? 0) > 0 && (
-                        <Paperclip className="size-3" aria-label="Has receipt" />
+                  <button
+                    type="button"
+                    onClick={() => nav(`/edit/${t.id}`)}
+                    className="flex w-full items-center gap-3 text-left"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium">
+                        <Icon className="size-3.5" />
+                        {t.category}
+                      </span>
+                      {t.description && (
+                        <div className="mt-1 truncate text-sm">{t.description}</div>
                       )}
-                      {formatDatePretty(t.date)}
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        {(t.receiptCount ?? 0) > 0 && (
+                          <Paperclip className="size-3" aria-label="Has receipt" />
+                        )}
+                        {formatDatePretty(t.date)}
+                      </div>
                     </div>
-                    <div className="text-xs text-pos">
+                    <span className="tabular shrink-0 text-sm text-muted-foreground">
+                      {formatCurrency(t.amount)}
+                    </span>
+                  </button>
+                  <div className="mt-2 flex items-center justify-between gap-2 border-t border-border/50 pt-2">
+                    <span className="text-xs font-medium text-pos">
                       Reimbursed {formatCurrency(eligibleOf(t))}
-                      {t.hsaReimbursedDate
-                        ? ` · ${formatDatePretty(t.hsaReimbursedDate)}`
-                        : ''}
-                    </div>
+                    </span>
+                    <Input
+                      type="date"
+                      value={t.hsaReimbursedDate ?? ''}
+                      onChange={(e) => setReimbDate(t.id, e.target.value)}
+                      aria-label="Reimbursed date"
+                      className="tabular h-7 w-[8.5rem] px-2 text-xs"
+                    />
                   </div>
-                  <span className="tabular shrink-0 text-sm text-muted-foreground">
-                    {formatCurrency(t.amount)}
-                  </span>
-                </button>
+                </div>
               )
             })}
           </section>
