@@ -59,16 +59,17 @@ export function HSAPage() {
   const [historical, setHistorical] = useState(false)
   const [saving, setSaving] = useState(false)
   const [zipping, setZipping] = useState(false)
-  const [year, setYear] = useState<string>('all')
+  const [year, setYear] = useState<string>(todayIso().slice(0, 4))
   const [q, setQ] = useState('')
 
   const hsaAll = useMemo(() => transactions.filter((t) => t.hsa), [transactions])
 
   // Calendar years present in the data (for tax-year filtering), not fiscal years.
-  const yearOptions = useMemo(
-    () => [...new Set(hsaAll.map((t) => t.date.slice(0, 4)))].sort().reverse(),
-    [hsaAll],
-  )
+  const yearOptions = useMemo(() => {
+    const years = new Set(hsaAll.map((t) => t.date.slice(0, 4)))
+    years.add(todayIso().slice(0, 4)) // always selectable, even with no data yet
+    return [...years].sort().reverse()
+  }, [hsaAll])
 
   const { hsa, unreimbursed, reimbursed, stats } = useMemo(() => {
     let hsa =

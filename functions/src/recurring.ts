@@ -15,6 +15,8 @@ interface Template {
   value: number
   description?: string
   active?: boolean
+  hsa?: boolean
+  hsaNotes?: string | null
 }
 
 /**
@@ -60,7 +62,8 @@ export async function materializeMonth(monthKey: string, monthStart: string) {
       tags: t.tags || [],
       amount: roundMoney((t.value * 12) / 13),
       description: t.description || '',
-      hsa: false,
+      hsa: !!t.hsa,
+      ...(t.hsa && t.hsaNotes ? { hsaNotes: t.hsaNotes } : {}),
       recurringTemplateId: t.id || null,
       fiscalYearKey: f.yearKey,
       fiscalMonthKey: f.monthKey,

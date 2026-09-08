@@ -37,6 +37,11 @@ function Row({
           <Icon className="size-3.5" />
           {r.category}
         </span>
+        {r.hsa && (
+          <span className="ml-1.5 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-500">
+            HSA
+          </span>
+        )}
         {r.description && (
           <div className="mt-1.5 truncate text-sm text-foreground/90">
             {r.description}

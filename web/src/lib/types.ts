@@ -63,6 +63,10 @@ export interface RecurringTemplate {
   value: number // calendar-monthly dollars
   description: string
   active: boolean
+  // When true, each month's materialized recurring-expense is created with
+  // hsa: true (e.g. a recurring medical debt payment) — see recurring.ts.
+  hsa?: boolean
+  hsaNotes?: string | null
   createdAt?: Timestamp | null
   updatedAt?: Timestamp | null
 }

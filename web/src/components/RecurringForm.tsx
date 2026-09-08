@@ -44,6 +44,8 @@ export function RecurringForm({
   const [description, setDescription] = useState(initial?.description ?? '')
   const [tags, setTags] = useState<string[]>(initial?.tags ?? [])
   const [active, setActive] = useState(initial?.active ?? true)
+  const [hsa, setHsa] = useState(initial?.hsa ?? false)
+  const [hsaNotes, setHsaNotes] = useState(initial?.hsaNotes ?? '')
   const [saving, setSaving] = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
 
@@ -55,7 +57,16 @@ export function RecurringForm({
     const v = parseCurrency(value)
     setSaving(true)
     try {
-      const payload = { type, category, tags, value: v, description: description.trim(), active }
+      const payload = {
+        type,
+        category,
+        tags,
+        value: v,
+        description: description.trim(),
+        active,
+        hsa: type === 'expense' ? hsa : false,
+        ...(type === 'expense' && hsa ? { hsaNotes: hsaNotes.trim() || null } : {}),
+      }
       if (editing) await updateRecurring(initial!.id, payload)
       else await addRecurring(payload)
       toast.success(editing ? 'Saved' : 'Added')
@@ -141,6 +152,30 @@ export function RecurringForm({
         </div>
         <Switch checked={active} onCheckedChange={setActive} />
       </div>
+
+      {type === 'expense' && (
+        <div className="flex items-center justify-between rounded-xl bg-card px-4 py-3">
+          <div>
+            <div className="font-medium">HSA expense</div>
+            <div className="text-xs text-muted-foreground">
+              Each month's materialized transaction is created already
+              flagged HSA
+            </div>
+          </div>
+          <Switch checked={hsa} onCheckedChange={setHsa} />
+        </div>
+      )}
+
+      {type === 'expense' && hsa && (
+        <div className="space-y-1.5">
+          <Label>HSA notes</Label>
+          <Input
+            value={hsaNotes}
+            onChange={(e) => setHsaNotes(e.target.value)}
+            placeholder="What's HSA-eligible, e.g. “Medical debt payment”"
+          />
+        </div>
+      )}
 
       <Button onClick={save} disabled={saving} className="h-11 w-full text-base">
         {saving && <Loader2 className="mr-2 size-4 animate-spin" />}

@@ -54,7 +54,7 @@ Doc id = random UUID. Fields:
 - `createdBy` (email, or `system`/`migration`), `createdAt`, `updatedAt`
 
 ### `recurringTemplates`
-Doc id = UUID. `{ id, type: income|expense, category, tags[], value (calendar-monthly $), description, active, createdAt, updatedAt }`. Editing/deleting a template does NOT touch already-materialized history rows.
+Doc id = UUID. `{ id, type: income|expense, category, tags[], value (calendar-monthly $), description, active, hsa?, hsaNotes?, createdAt, updatedAt }`. Editing/deleting a template does NOT touch already-materialized history rows — that includes `hsa`: flipping it only changes future materializations, not past ones.
 
 ### `tags`
 Doc id = lowercased name. `{ name }`. Auto-created on use via `ensureTags()`.
