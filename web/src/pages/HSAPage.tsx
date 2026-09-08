@@ -298,7 +298,19 @@ export function HSAPage() {
                       {t.description && (
                         <div className="mt-1 truncate text-sm">{t.description}</div>
                       )}
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      {t.tags?.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {t.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                         {(t.receiptCount ?? 0) > 0 && (
                           <Paperclip className="size-3" aria-label="Has receipt" />
                         )}
@@ -344,7 +356,19 @@ export function HSAPage() {
                       {t.description && (
                         <div className="mt-1 truncate text-sm">{t.description}</div>
                       )}
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      {t.tags?.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {t.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                         {(t.receiptCount ?? 0) > 0 && (
                           <Paperclip className="size-3" aria-label="Has receipt" />
                         )}
