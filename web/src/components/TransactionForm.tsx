@@ -54,6 +54,7 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
   const [tags, setTags] = useState<string[]>(initial?.tags ?? [])
   const [hsa, setHsa] = useState(initial?.hsa ?? false)
   const [hsaNotes, setHsaNotes] = useState(initial?.hsaNotes ?? '')
+  const [serviceDate, setServiceDate] = useState(initial?.hsaServiceDate ?? '')
   const [reimbAmount, setReimbAmount] = useState(
     initial?.hsaReimbursedAmount != null ? String(initial.hsaReimbursedAmount) : '',
   )
@@ -96,7 +97,12 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
         amount: amt,
         description: description.trim(),
         hsa: isExpense ? hsa : false,
-        ...(isExpense && hsa ? { hsaNotes: hsaNotes.trim() || null } : {}),
+        ...(isExpense && hsa
+          ? {
+              hsaNotes: hsaNotes.trim() || null,
+              hsaServiceDate: serviceDate || null,
+            }
+          : {}),
       }
       let newId: string | undefined
       if (mode === 'add') {
@@ -235,13 +241,28 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
       )}
 
       {isExpense && hsa && (
-        <div className="space-y-1.5">
-          <Label>HSA notes</Label>
-          <Input
-            value={hsaNotes}
-            onChange={(e) => setHsaNotes(e.target.value)}
-            placeholder="What's HSA-eligible, e.g. “Children's Tylenol”"
-          />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label>HSA notes</Label>
+            <Input
+              value={hsaNotes}
+              onChange={(e) => setHsaNotes(e.target.value)}
+              placeholder="What's HSA-eligible, e.g. “Children's Tylenol”"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Service date</Label>
+            <Input
+              type="date"
+              value={serviceDate}
+              onChange={(e) => setServiceDate(e.target.value)}
+              className="tabular"
+            />
+            <p className="text-xs text-muted-foreground">
+              Optional — when the service happened, if different from the
+              payment date above
+            </p>
+          </div>
         </div>
       )}
 

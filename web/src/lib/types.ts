@@ -21,6 +21,7 @@ export interface Transaction {
 
   // HSA
   hsa?: boolean
+  hsaServiceDate?: string | null // when the medical service was rendered (optional; may differ from `date`, when payment happened)
   hsaReimbursedAmount?: number | null
   hsaReimbursedDate?: string | null
   hsaNotes?: string | null

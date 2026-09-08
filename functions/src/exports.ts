@@ -44,6 +44,7 @@ export const exportAuditZip = onCall(
     const manifest: unknown[][] = [
       [
         'Date',
+        'Service date',
         'Category',
         'Description',
         'Tags',
@@ -71,6 +72,7 @@ export const exportAuditZip = onCall(
       }
       manifest.push([
         t.date,
+        t.hsaServiceDate ?? '',
         t.category,
         t.description,
         Array.isArray(t.tags) ? t.tags.join('; ') : '',

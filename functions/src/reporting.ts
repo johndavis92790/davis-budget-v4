@@ -21,6 +21,7 @@ const SCHEMA = {
     { name: 'signedAmount', type: 'FLOAT' },
     { name: 'description', type: 'STRING' },
     { name: 'hsa', type: 'BOOLEAN' },
+    { name: 'hsaServiceDate', type: 'DATE' },
     { name: 'hsaReimbursedAmount', type: 'FLOAT' },
     { name: 'hsaReimbursedDate', type: 'DATE' },
     { name: 'fiscalYear', type: 'STRING' },
@@ -58,6 +59,7 @@ export async function syncTransactionsToBigQuery(): Promise<number> {
       signedAmount: signed(t.type, amount),
       description: t.description ?? '',
       hsa: !!t.hsa,
+      hsaServiceDate: t.hsaServiceDate ?? null,
       hsaReimbursedAmount:
         typeof t.hsaReimbursedAmount === 'number' ? t.hsaReimbursedAmount : null,
       hsaReimbursedDate: t.hsaReimbursedDate ?? null,

@@ -172,9 +172,20 @@ export function HSAPage() {
 
   function exportCsv() {
     const rows = [
-      ['Date', 'Category', 'Description', 'Tags', 'Amount', 'HSA amount', 'Reimbursed date', 'Reimbursed'],
+      [
+        'Date',
+        'Service date',
+        'Category',
+        'Description',
+        'Tags',
+        'Amount',
+        'HSA amount',
+        'Reimbursed date',
+        'Reimbursed',
+      ],
       ...hsa.map((t) => [
         t.date,
+        t.hsaServiceDate ?? '',
         t.category,
         t.description,
         t.tags.join('; '),
@@ -400,6 +411,8 @@ export function HSAPage() {
                         )}
                         {formatDatePretty(t.date)}
                         {(t.receiptCount ?? 0) === 0 && ' · No receipt'}
+                        {t.hsaServiceDate &&
+                          ` · Service ${formatDatePretty(t.hsaServiceDate)}`}
                       </div>
                     </div>
                     <span className="tabular shrink-0 font-semibold text-neg">
@@ -468,6 +481,8 @@ export function HSAPage() {
                         )}
                         {formatDatePretty(t.date)}
                         {(t.receiptCount ?? 0) === 0 && ' · No receipt'}
+                        {t.hsaServiceDate &&
+                          ` · Service ${formatDatePretty(t.hsaServiceDate)}`}
                       </div>
                     </div>
                     <span className="tabular shrink-0 text-sm text-muted-foreground">

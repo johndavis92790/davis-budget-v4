@@ -48,7 +48,7 @@ Doc id = random UUID. Fields:
 - `id`, `date` (`YYYY-MM-DD`), `sortTime` (number, ms — input-order tiebreak within a day)
 - `type`: `expense | refund | income | recurring-expense | recurring-income | reimbursement | adjustment`
 - `category` (one of the 17 fixed categories), `tags` (string[]), `amount`, `description`
-- HSA: `hsa` (bool), `hsaReimbursedAmount`, `hsaReimbursedDate`, `hsaNotes`
+- HSA: `hsa` (bool), `hsaServiceDate` (optional — when the service happened, if different from `date` which is the payment date), `hsaReimbursedAmount`, `hsaReimbursedDate`, `hsaNotes`
 - Links: `refundedFromId` (refund → its expense), `linkedExpenseIds` (reimbursement → HSA expenses it covers), `reimbursementId` (HSA expense → the reimbursement that paid it), `recurringTemplateId` (materialized recurring → its template)
 - Denormalized fiscal keys: `fiscalYearKey` (`FY2026`), `fiscalMonthKey` (`FY2026-P07`), `fiscalWeekKey` (`FY2026-P07-W4`) — computed from `date`
 - `createdBy` (email, or `system`/`migration`), `createdAt`, `updatedAt`
