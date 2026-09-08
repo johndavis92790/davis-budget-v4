@@ -10,7 +10,12 @@ import { CategorySelect } from './CategorySelect'
 import { TagInput } from './TagInput'
 import { useAuth } from '@/lib/auth'
 import { useData } from '@/lib/data'
-import { addTransaction, updateTransaction, reimburseHsaExpenses } from '@/lib/db'
+import {
+  addTransaction,
+  updateTransaction,
+  reimburseHsaExpenses,
+  markHsaReimbursedHistorical,
+} from '@/lib/db'
 import { uploadReceipt } from '@/lib/receipts'
 import { formatCurrency, parseCurrency } from '@/lib/money'
 import { todayIso } from '@/lib/fiscal'
@@ -53,6 +58,7 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
     initial?.hsaReimbursedAmount != null ? String(initial.hsaReimbursedAmount) : '',
   )
   const [reimbDate, setReimbDate] = useState(initial?.hsaReimbursedDate ?? todayIso())
+  const [reimbHistorical, setReimbHistorical] = useState(false)
   const [saving, setSaving] = useState(false)
   const [receipts, setReceipts] = useState<File[]>([])
   const receiptRef = useRef<HTMLInputElement>(null)
@@ -109,14 +115,23 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
       }
       const savedId = mode === 'add' ? newId : initial?.id
 
-      // Reimburse now, if an amount was entered — creates the linked
-      // reimbursement income transaction so Available Funds updates too.
+      // Reimburse now, if an amount was entered. Historical entries just set
+      // the fields (no ledger impact, for money that already moved before
+      // this was tracked); otherwise this creates the linked reimbursement
+      // income transaction so Available Funds updates too.
       if (showReimburseFields && reimbAmt > 0 && savedId) {
-        await reimburseHsaExpenses(
-          [{ expense: { id: savedId } as Transaction, amount: reimbAmt }],
-          reimbDate || todayIso(),
-          user?.email ?? undefined,
-        )
+        if (reimbHistorical) {
+          await markHsaReimbursedHistorical(
+            [{ id: savedId, amount: reimbAmt }],
+            reimbDate || todayIso(),
+          )
+        } else {
+          await reimburseHsaExpenses(
+            [{ expense: { id: savedId } as Transaction, amount: reimbAmt }],
+            reimbDate || todayIso(),
+            user?.email ?? undefined,
+          )
+        }
         toast.success(
           `${mode === 'add' ? 'Added' : 'Saved'} and reimbursed ${formatCurrency(reimbAmt)}`,
         )
@@ -278,6 +293,15 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
             }
             return null
           })()}
+          <div className="flex items-center justify-between rounded-lg bg-secondary/60 px-3 py-2">
+            <div>
+              <div className="text-sm font-medium">Historical entry</div>
+              <div className="text-xs text-muted-foreground">
+                Already reimbursed before now — don&apos;t add to Available Funds
+              </div>
+            </div>
+            <Switch checked={reimbHistorical} onCheckedChange={setReimbHistorical} />
+          </div>
         </div>
       )}
 

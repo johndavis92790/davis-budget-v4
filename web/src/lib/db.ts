@@ -142,6 +142,62 @@ export async function reimburseHsaExpenses(
   return ref.id
 }
 
+/**
+ * Mark HSA expenses reimbursed WITHOUT creating a linked income transaction —
+ * for backdating catch-up entries that already happened before this was
+ * tracked here, so Available Funds isn't double-counted for money that
+ * already moved. No reimbursementId is set, so `undo` is just clearing the
+ * fields (clearHsaReimbursement), same as migrated data.
+ */
+export async function markHsaReimbursedHistorical(
+  items: { id: string; amount: number }[],
+  reimbursedDate: string,
+) {
+  const batch = writeBatch(db)
+  items.forEach((it) => {
+    batch.update(doc(transactionsCol, it.id), {
+      hsaReimbursedDate: reimbursedDate,
+      hsaReimbursedAmount: roundMoney(it.amount),
+      updatedAt: serverTimestamp(),
+    })
+  })
+  await batch.commit()
+}
+
+/**
+ * Edit how much of an already-reimbursed HSA expense was reimbursed. If it's
+ * linked to a real reimbursement income transaction, that transaction's total
+ * is recomputed from all its linked expenses so Available Funds stays
+ * correct; a historical (unlinked) entry is just patched directly.
+ */
+export async function updateHsaReimbursedAmount(
+  expense: Transaction,
+  newAmount: number,
+  allTransactions: Transaction[],
+) {
+  const amt = roundMoney(newAmount)
+  const batch = writeBatch(db)
+  batch.update(doc(transactionsCol, expense.id), {
+    hsaReimbursedAmount: amt,
+    updatedAt: serverTimestamp(),
+  })
+  if (expense.reimbursementId) {
+    const linked = allTransactions.filter(
+      (t) => t.reimbursementId === expense.reimbursementId,
+    )
+    const newTotal = sumMoney(
+      linked.map((t) =>
+        t.id === expense.id ? amt : (t.hsaReimbursedAmount ?? t.amount),
+      ),
+    )
+    batch.update(doc(transactionsCol, expense.reimbursementId), {
+      amount: newTotal,
+      updatedAt: serverTimestamp(),
+    })
+  }
+  await batch.commit()
+}
+
 /** Undo a reimbursement: delete the income txn and clear links on its expenses. */
 export async function undoReimbursement(
   reimbursement: Transaction,

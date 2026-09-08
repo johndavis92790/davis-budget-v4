@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
   DialogContent,
@@ -23,7 +24,11 @@ import { FileArchive } from 'lucide-react'
 import { categoryIcon } from '@/lib/categories'
 import { useAuth } from '@/lib/auth'
 import { useData } from '@/lib/data'
-import { reimburseHsaExpenses, updateTransaction } from '@/lib/db'
+import {
+  reimburseHsaExpenses,
+  markHsaReimbursedHistorical,
+  updateTransaction,
+} from '@/lib/db'
 import { storage } from '@/lib/firebase'
 import { exportAuditZipFn } from '@/lib/functions'
 import { formatCurrency, parseCurrency, roundMoney, sumMoney } from '@/lib/money'
@@ -44,6 +49,7 @@ export function HSAPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [amounts, setAmounts] = useState<Record<string, string>>({})
   const [date, setDate] = useState(todayIso())
+  const [historical, setHistorical] = useState(false)
   const [saving, setSaving] = useState(false)
   const [zipping, setZipping] = useState(false)
   const [year, setYear] = useState<string>('all')
@@ -102,6 +108,7 @@ export function HSAPage() {
     selectedList.forEach((t) => (init[t.id] = String(eligibleOf(t))))
     setAmounts(init)
     setDate(todayIso())
+    setHistorical(false)
     setDialogOpen(true)
   }
 
@@ -112,8 +119,20 @@ export function HSAPage() {
         expense,
         amount: parseCurrency(amounts[expense.id] ?? String(expense.amount)),
       }))
-      await reimburseHsaExpenses(items, date, user?.email ?? undefined)
-      toast.success(`Reimbursed ${items.length} item${items.length > 1 ? 's' : ''}`)
+      if (historical) {
+        // Catch-up entry for money already reimbursed before this was
+        // tracked here — record it without touching Available Funds.
+        await markHsaReimbursedHistorical(
+          items.map((i) => ({ id: i.expense.id, amount: i.amount })),
+          date,
+        )
+        toast.success(
+          `Marked ${items.length} item${items.length > 1 ? 's' : ''} as reimbursed`,
+        )
+      } else {
+        await reimburseHsaExpenses(items, date, user?.email ?? undefined)
+        toast.success(`Reimbursed ${items.length} item${items.length > 1 ? 's' : ''}`)
+      }
       setSelected(new Set())
       setDialogOpen(false)
     } catch {
@@ -379,9 +398,19 @@ export function HSAPage() {
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Creates one income entry for the total and marks these expenses
-              reimbursed. Adjust amounts if only part was eligible.
+              {historical
+                ? "Marks these reimbursed without changing Available Funds — use for money that already moved before this was tracked here."
+                : 'Creates one income entry for the total and marks these expenses reimbursed. Adjust amounts if only part was eligible.'}
             </p>
+            <div className="flex items-center justify-between rounded-lg bg-secondary/60 px-3 py-2">
+              <div>
+                <div className="text-sm font-medium">Historical entry</div>
+                <div className="text-xs text-muted-foreground">
+                  Already reimbursed before now — don&apos;t add to Available Funds
+                </div>
+              </div>
+              <Switch checked={historical} onCheckedChange={setHistorical} />
+            </div>
             <div className="space-y-2">
               {selectedList.map((t) => (
                 <div
@@ -431,7 +460,8 @@ export function HSAPage() {
               className="h-11 w-full text-base"
             >
               {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-              Reimburse {formatCurrency(roundMoney(dialogTotal))}
+              {historical ? 'Mark' : 'Reimburse'}{' '}
+              {formatCurrency(roundMoney(dialogTotal))}
             </Button>
           </div>
         </DialogContent>

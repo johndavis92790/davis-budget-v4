@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Trash2, Undo2, SplitSquareVertical } from 'lucide-react'
 import { toast } from 'sonner'
@@ -35,6 +35,7 @@ import {
   undoReimbursement,
   clearHsaReimbursement,
   updateTransaction,
+  updateHsaReimbursedAmount,
 } from '@/lib/db'
 import { copyReceipts } from '@/lib/receipts'
 import { parseCurrency, formatCurrency } from '@/lib/money'
@@ -55,6 +56,14 @@ export function EditTransactionPage() {
   const [splitting, setSplitting] = useState(false)
   const [splitSaving, setSplitSaving] = useState(false)
   const [splitDate, setSplitDate] = useState(todayIso())
+  const [reimbAmountInput, setReimbAmountInput] = useState('')
+
+  // Resync the editable reimbursed-amount field when navigating to a
+  // different transaction or when it changes from elsewhere.
+  useEffect(() => {
+    if (t) setReimbAmountInput(String(t.hsaReimbursedAmount ?? t.amount))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t?.id, t?.hsaReimbursedAmount, t?.amount])
 
   if (!t) {
     return (
@@ -110,6 +119,23 @@ export function EditTransactionPage() {
       await updateTransaction(t!.id, { hsaReimbursedDate: value || null })
     } catch {
       toast.error('Could not update the reimbursed date')
+    }
+  }
+
+  async function commitReimbAmount() {
+    const current = t!.hsaReimbursedAmount ?? t!.amount
+    const amt = parseCurrency(reimbAmountInput)
+    if (amt <= 0 || amt === current) return
+    if (amt > t!.amount) {
+      toast.error("Reimbursed amount can't exceed the expense amount")
+      setReimbAmountInput(String(current))
+      return
+    }
+    try {
+      await updateHsaReimbursedAmount(t!, amt, transactions)
+    } catch {
+      toast.error('Could not update the reimbursed amount')
+      setReimbAmountInput(String(current))
     }
   }
 
@@ -205,19 +231,40 @@ export function EditTransactionPage() {
 
       {t.hsa && isReimbursed(t) && (
         <div className="rounded-xl bg-pos/10 px-4 py-3 text-sm">
-          <div className="font-medium text-pos">
-            Reimbursed {formatCurrency(t.hsaReimbursedAmount ?? t.amount)}
-          </div>
-          <div className="mt-1.5 space-y-1">
-            <Label className="text-xs text-muted-foreground">
-              Reimbursed date
-            </Label>
-            <Input
-              type="date"
-              value={t.hsaReimbursedDate ?? ''}
-              onChange={(e) => setReimbDate(e.target.value)}
-              className="tabular h-8 w-40 text-xs"
-            />
+          <div className="font-medium text-pos">Reimbursed</div>
+          {reimbursement && (
+            <div className="text-xs text-muted-foreground">
+              Linked to a reimbursement transaction — editing the amount here
+              also updates it, so Available Funds stays correct.
+            </div>
+          )}
+          <div className="mt-1.5 grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Amount</Label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                  $
+                </span>
+                <Input
+                  inputMode="decimal"
+                  value={reimbAmountInput}
+                  onChange={(e) => setReimbAmountInput(e.target.value)}
+                  onBlur={commitReimbAmount}
+                  className="tabular h-8 pl-5 text-xs"
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Reimbursed date
+              </Label>
+              <Input
+                type="date"
+                value={t.hsaReimbursedDate ?? ''}
+                onChange={(e) => setReimbDate(e.target.value)}
+                className="tabular h-8 text-xs"
+              />
+            </div>
           </div>
           <Button
             variant="ghost"
