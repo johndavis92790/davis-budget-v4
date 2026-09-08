@@ -314,10 +314,13 @@ export function HSAPage() {
                     {t.description && (
                       <div className="mt-1 truncate text-sm">{t.description}</div>
                     )}
-                    <div className="flex items-center gap-1 text-xs text-pos">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       {(t.receiptCount ?? 0) > 0 && (
                         <Paperclip className="size-3" aria-label="Has receipt" />
                       )}
+                      {formatDatePretty(t.date)}
+                    </div>
+                    <div className="text-xs text-pos">
                       Reimbursed {formatCurrency(eligibleOf(t))}
                       {t.hsaReimbursedDate
                         ? ` · ${formatDatePretty(t.hsaReimbursedDate)}`
