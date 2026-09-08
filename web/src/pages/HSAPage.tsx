@@ -4,9 +4,11 @@ import {
   Check,
   ChevronRight,
   Download,
+  FileWarning,
   Loader2,
   Paperclip,
   Search,
+  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -61,8 +63,17 @@ export function HSAPage() {
   const [zipping, setZipping] = useState(false)
   const [year, setYear] = useState<string>(todayIso().slice(0, 4))
   const [q, setQ] = useState('')
+  const [onlyMissingDocs, setOnlyMissingDocs] = useState(false)
 
   const hsaAll = useMemo(() => transactions.filter((t) => t.hsa), [transactions])
+
+  // Every HSA transaction needs documentation — surfaced regardless of the
+  // year/search filters so a missing receipt from a prior year is never
+  // silently hidden by the "current year" default.
+  const missingDocsAll = useMemo(
+    () => hsaAll.filter((t) => (t.receiptCount ?? 0) === 0),
+    [hsaAll],
+  )
 
   // Calendar years present in the data (for tax-year filtering), not fiscal years.
   const yearOptions = useMemo(() => {
@@ -81,6 +92,7 @@ export function HSAPage() {
         return hay.includes(ql)
       })
     }
+    if (onlyMissingDocs) hsa = hsa.filter((t) => (t.receiptCount ?? 0) === 0)
     const unreimbursed = hsa.filter((t) => !isReimbursed(t))
     const reimbursed = hsa.filter((t) => isReimbursed(t))
     // HSA-eligible dollars only — a transaction's full `amount` can include
@@ -98,7 +110,7 @@ export function HSAPage() {
       outstandingCount: unreimbursed.length,
     }
     return { hsa, unreimbursed, reimbursed, stats }
-  }, [hsaAll, year, q])
+  }, [hsaAll, year, q, onlyMissingDocs])
 
   const selectedList = unreimbursed.filter((t) => selected.has(t.id))
   const selectedTotal = sumMoney(selectedList.map((t) => t.amount))
@@ -213,6 +225,43 @@ export function HSAPage() {
           className="pl-9"
         />
       </div>
+
+      {missingDocsAll.length > 0 && (
+        <div className="flex items-center gap-3 rounded-xl bg-neg/10 px-4 py-3 text-sm text-neg">
+          <FileWarning className="size-4 shrink-0" />
+          <div className="flex-1">
+            {missingDocsAll.length} HSA transaction
+            {missingDocsAll.length === 1 ? '' : 's'} — including{' '}
+            {missingDocsAll.filter(isReimbursed).length} already reimbursed —{' '}
+            {missingDocsAll.length === 1 ? 'has' : 'have'} no receipt attached
+            {year !== 'all' ? ' (across all years)' : ''}.
+          </div>
+          {onlyMissingDocs ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setOnlyMissingDocs(false)}
+              className="h-7 shrink-0 gap-1 px-2 text-neg hover:bg-neg/15 hover:text-neg"
+            >
+              <X className="size-3.5" />
+              Clear
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setYear('all')
+                setQ('')
+                setOnlyMissingDocs(true)
+              }}
+              className="h-7 shrink-0 px-2 text-neg underline hover:bg-neg/15 hover:text-neg"
+            >
+              Show only these
+            </Button>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center gap-2">
         <Select value={year} onValueChange={setYear}>
@@ -336,11 +385,21 @@ export function HSAPage() {
                           ))}
                         </div>
                       )}
-                      <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                        {(t.receiptCount ?? 0) > 0 && (
+                      <div
+                        className={cn(
+                          'mt-1 flex items-center gap-1 text-xs',
+                          (t.receiptCount ?? 0) > 0
+                            ? 'text-muted-foreground'
+                            : 'font-medium text-neg',
+                        )}
+                      >
+                        {(t.receiptCount ?? 0) > 0 ? (
                           <Paperclip className="size-3" aria-label="Has receipt" />
+                        ) : (
+                          <FileWarning className="size-3" aria-label="No receipt" />
                         )}
                         {formatDatePretty(t.date)}
+                        {(t.receiptCount ?? 0) === 0 && ' · No receipt'}
                       </div>
                     </div>
                     <span className="tabular shrink-0 font-semibold text-neg">
@@ -394,11 +453,21 @@ export function HSAPage() {
                           ))}
                         </div>
                       )}
-                      <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                        {(t.receiptCount ?? 0) > 0 && (
+                      <div
+                        className={cn(
+                          'mt-1 flex items-center gap-1 text-xs',
+                          (t.receiptCount ?? 0) > 0
+                            ? 'text-muted-foreground'
+                            : 'font-medium text-neg',
+                        )}
+                      >
+                        {(t.receiptCount ?? 0) > 0 ? (
                           <Paperclip className="size-3" aria-label="Has receipt" />
+                        ) : (
+                          <FileWarning className="size-3" aria-label="No receipt" />
                         )}
                         {formatDatePretty(t.date)}
+                        {(t.receiptCount ?? 0) === 0 && ' · No receipt'}
                       </div>
                     </div>
                     <span className="tabular shrink-0 text-sm text-muted-foreground">
