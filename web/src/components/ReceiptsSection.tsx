@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { FileText, Plus, Trash2, Loader2 } from 'lucide-react'
+import { Download, FileText, Plus, Trash2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -89,6 +89,26 @@ export function ReceiptsSection({ transactionId }: { transactionId: string }) {
     }
   }
 
+  // Fetch as a blob and save via an object URL — a plain `download` attribute
+  // isn't honored for cross-origin URLs (Firebase Storage), so a direct link
+  // just opens the file instead of saving it.
+  async function onDownload(f: ReceiptFile) {
+    try {
+      const res = await fetch(f.url)
+      const blob = await res.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = f.name
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(blobUrl)
+    } catch {
+      toast.error('Could not download')
+    }
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -151,6 +171,14 @@ export function ReceiptsSection({ transactionId }: { transactionId: string }) {
                 className="absolute right-1 top-1 flex size-6 items-center justify-center rounded-md bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
               >
                 <Trash2 className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onDownload(f)}
+                aria-label="Download receipt"
+                className="absolute bottom-1 right-1 flex size-6 items-center justify-center rounded-md bg-black/60 text-white"
+              >
+                <Download className="size-3.5" />
               </button>
             </div>
           ))}
