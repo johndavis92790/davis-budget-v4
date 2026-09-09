@@ -9,8 +9,44 @@ import {
   deleteReceipt,
   type ReceiptFile,
 } from '@/lib/receipts'
+import { getPdfThumbnail } from '@/lib/pdfThumbnail'
 
 const isImage = (name: string) => /\.(png|jpe?g|webp|gif|heic|avif)$/i.test(name)
+const isPdf = (name: string) => /\.pdf$/i.test(name)
+
+/** First-page thumbnail of a PDF receipt, rendered client-side via pdf.js. */
+function PdfThumb({ url }: { url: string }) {
+  const [src, setSrc] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    setSrc(null)
+    setFailed(false)
+    getPdfThumbnail(url).then((dataUrl) => {
+      if (cancelled) return
+      if (dataUrl) setSrc(dataUrl)
+      else setFailed(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [url])
+
+  if (src) {
+    return <img src={src} alt="receipt (PDF, page 1)" className="size-full object-cover" />
+  }
+  return (
+    <div className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
+      {failed ? (
+        <FileText className="size-6" />
+      ) : (
+        <Loader2 className="size-5 animate-spin" />
+      )}
+      <span className="text-[10px]">PDF</span>
+    </div>
+  )
+}
 
 export function ReceiptsSection({ transactionId }: { transactionId: string }) {
   const [files, setFiles] = useState<ReceiptFile[]>([])
@@ -99,10 +135,12 @@ export function ReceiptsSection({ transactionId }: { transactionId: string }) {
                     alt="receipt"
                     className="size-full object-cover"
                   />
+                ) : isPdf(f.name) ? (
+                  <PdfThumb url={f.url} />
                 ) : (
                   <div className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
                     <FileText className="size-6" />
-                    <span className="text-[10px]">PDF</span>
+                    <span className="text-[10px]">File</span>
                   </div>
                 )}
               </a>
