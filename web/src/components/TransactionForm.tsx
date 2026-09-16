@@ -286,9 +286,22 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
                   inputMode="decimal"
                   value={reimbAmount}
                   onChange={(e) => setReimbAmount(e.target.value)}
+                  onFocus={() => {
+                    if (!reimbAmount && amount) setReimbAmount(amount)
+                  }}
                   placeholder="0.00"
-                  className="tabular pl-7"
+                  className="tabular pl-7 pr-8"
                 />
+                {reimbAmount && (
+                  <button
+                    type="button"
+                    onClick={() => setReimbAmount('')}
+                    aria-label="Clear reimbursed amount"
+                    className="absolute right-2 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
               </div>
             </div>
             <div className="space-y-1.5">
