@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Trash2, Undo2, SplitSquareVertical } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  Trash2,
+  Undo2,
+  SplitSquareVertical,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { TransactionForm } from '@/components/TransactionForm'
 import { TransactionRow } from '@/components/TransactionRow'
@@ -77,6 +83,10 @@ export function EditTransactionPage() {
   const reimbursement = t.reimbursementId
     ? transactions.find((x) => x.id === t.reimbursementId)
     : null
+  const linkedHsaExpenses =
+    t.type === 'reimbursement'
+      ? transactions.filter((x) => t.linkedExpenseIds?.includes(x.id))
+      : []
 
   async function del() {
     await deleteTransaction(t!.id)
@@ -229,6 +239,26 @@ export function EditTransactionPage() {
 
       <ReceiptsSection transactionId={t.id} />
 
+      {t.type === 'reimbursement' && (
+        <div className="space-y-2">
+          <div className="text-xs font-medium text-muted-foreground">
+            Linked HSA expenses ({linkedHsaExpenses.length})
+          </div>
+          {linkedHsaExpenses.map((e) => (
+            <TransactionRow
+              key={e.id}
+              t={e}
+              onClick={() => nav(`/edit/${e.id}`)}
+            />
+          ))}
+          {linkedHsaExpenses.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              No linked expenses found — they may have been deleted.
+            </p>
+          )}
+        </div>
+      )}
+
       {t.hsa && isReimbursed(t) && (
         <div className="rounded-xl bg-pos/10 px-4 py-3 text-sm">
           <div className="font-medium text-pos">Reimbursed</div>
@@ -266,15 +296,28 @@ export function EditTransactionPage() {
               />
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={reimbursement ? undoReimb : markNotReimbursed}
-            className="mt-1 h-7 gap-1 px-2 text-xs text-muted-foreground"
-          >
-            <Undo2 className="size-3" />
-            {reimbursement ? 'Undo reimbursement' : 'Mark as not reimbursed'}
-          </Button>
+          <div className="mt-1 flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={reimbursement ? undoReimb : markNotReimbursed}
+              className="h-7 gap-1 px-2 text-xs text-muted-foreground"
+            >
+              <Undo2 className="size-3" />
+              {reimbursement ? 'Undo reimbursement' : 'Mark as not reimbursed'}
+            </Button>
+            {reimbursement && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => nav(`/edit/${reimbursement.id}`)}
+                className="h-7 gap-1 px-2 text-xs text-muted-foreground"
+              >
+                <ArrowUpRight className="size-3" />
+                View reimbursement
+              </Button>
+            )}
+          </div>
         </div>
       )}
 

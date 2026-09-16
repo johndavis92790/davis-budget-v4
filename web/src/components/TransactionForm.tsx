@@ -71,6 +71,10 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
   // this form only offers the "reimburse now" fields for a fresh HSA item.
   const alreadyReimbursed = isReimbursed(initial ?? {})
   const showReimburseFields = isExpense && hsa && !alreadyReimbursed
+  // A reimbursement's amount is the sum of what it reimburses per expense —
+  // editing it here wouldn't sync back to those expenses, so it's locked;
+  // adjust the amount on each linked expense instead.
+  const isReimbursementTx = finalType === 'reimbursement'
 
   async function handleSave() {
     if (!category) {
@@ -196,12 +200,21 @@ export function TransactionForm({ mode, initial, onSaved }: Props) {
               inputMode="decimal"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
+              disabled={isReimbursementTx}
               placeholder="0.00"
-              className="tabular pl-7 text-right"
+              className="tabular pl-7 text-right disabled:opacity-70"
             />
           </div>
         </div>
       </div>
+
+      {isReimbursementTx && (
+        <p className="-mt-2 text-xs text-muted-foreground">
+          Sum of {initial?.linkedExpenseIds?.length ?? 0} linked HSA expense
+          {(initial?.linkedExpenseIds?.length ?? 0) === 1 ? '' : 's'} — edit
+          the amount on each expense instead.
+        </p>
+      )}
 
       <div className="space-y-1.5">
         <Label>Date</Label>
