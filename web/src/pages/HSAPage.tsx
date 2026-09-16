@@ -44,6 +44,7 @@ import { formatCurrency, parseCurrency, roundMoney, sumMoney } from '@/lib/money
 import { formatDatePretty, todayIso } from '@/lib/fiscal'
 import { downloadCsv } from '@/lib/export'
 import { isReimbursed, type Transaction } from '@/lib/types'
+import { usePersistedFilters } from '@/lib/usePersistedFilters'
 import { cn } from '@/lib/utils'
 
 function eligibleOf(t: Transaction) {
@@ -61,9 +62,10 @@ export function HSAPage() {
   const [historical, setHistorical] = useState(false)
   const [saving, setSaving] = useState(false)
   const [zipping, setZipping] = useState(false)
-  const [year, setYear] = useState<string>(todayIso().slice(0, 4))
-  const [q, setQ] = useState('')
-  const [onlyMissingDocs, setOnlyMissingDocs] = useState(false)
+  const [{ year, q, onlyMissingDocs }, setFilters] = usePersistedFilters(
+    'filters:hsa',
+    { year: todayIso().slice(0, 4), q: '', onlyMissingDocs: false },
+  )
 
   const hsaAll = useMemo(() => transactions.filter((t) => t.hsa), [transactions])
 
@@ -231,7 +233,7 @@ export function HSAPage() {
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => setFilters({ q: e.target.value })}
           placeholder="Search description, category, tags, notes…"
           className="pl-9"
         />
@@ -251,7 +253,7 @@ export function HSAPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setOnlyMissingDocs(false)}
+              onClick={() => setFilters({ onlyMissingDocs: false })}
               className="h-7 shrink-0 gap-1 px-2 text-neg hover:bg-neg/15 hover:text-neg"
             >
               <X className="size-3.5" />
@@ -261,11 +263,9 @@ export function HSAPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                setYear('all')
-                setQ('')
-                setOnlyMissingDocs(true)
-              }}
+              onClick={() =>
+                setFilters({ year: 'all', q: '', onlyMissingDocs: true })
+              }
               className="h-7 shrink-0 px-2 text-neg underline hover:bg-neg/15 hover:text-neg"
             >
               Show only these
@@ -275,7 +275,7 @@ export function HSAPage() {
       )}
 
       <div className="flex items-center gap-2">
-        <Select value={year} onValueChange={setYear}>
+        <Select value={year} onValueChange={(v) => setFilters({ year: v })}>
           <SelectTrigger className="flex-1">
             <SelectValue />
           </SelectTrigger>

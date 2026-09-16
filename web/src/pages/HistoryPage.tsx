@@ -13,6 +13,7 @@ import {
 import { TransactionRow } from '@/components/TransactionRow'
 import { useData } from '@/lib/data'
 import { CATEGORY_NAMES } from '@/lib/categories'
+import { usePersistedFilters } from '@/lib/usePersistedFilters'
 
 const TYPE_FILTERS = [
   { v: 'all', l: 'All types' },
@@ -26,9 +27,11 @@ const TYPE_FILTERS = [
 export function HistoryPage() {
   const { transactions, loading } = useData()
   const nav = useNavigate()
-  const [q, setQ] = useState('')
-  const [type, setType] = useState('all')
-  const [cat, setCat] = useState('all')
+  const [{ q, type, cat }, setFilters] = usePersistedFilters('filters:history', {
+    q: '',
+    type: 'all',
+    cat: 'all',
+  })
   const [limit, setLimit] = useState(40)
 
   const filtered = useMemo(() => {
@@ -59,7 +62,7 @@ export function HistoryPage() {
         <Input
           value={q}
           onChange={(e) => {
-            setQ(e.target.value)
+            setFilters({ q: e.target.value })
             setLimit(40)
           }}
           placeholder="Search description, category, tags…"
@@ -71,7 +74,7 @@ export function HistoryPage() {
         <Select
           value={type}
           onValueChange={(v) => {
-            setType(v)
+            setFilters({ type: v })
             setLimit(40)
           }}
         >
@@ -89,7 +92,7 @@ export function HistoryPage() {
         <Select
           value={cat}
           onValueChange={(v) => {
-            setCat(v)
+            setFilters({ cat: v })
             setLimit(40)
           }}
         >

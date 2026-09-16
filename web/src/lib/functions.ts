@@ -46,3 +46,20 @@ export const sendTestNotificationFn = httpsCallable<void, { sent: number }>(
   fns,
   'sendTestNotification',
 )
+
+export interface InsightsSummary {
+  label: string
+  totalSpent: number
+  totalIncome: number
+  net: number
+  byCategory: { category: string; amount: number }[]
+  byTag: { tag: string; amount: number }[]
+  topExpenses: { description: string; category: string; amount: number; date: string }[]
+  priorPeriodSpent?: number
+  hsa?: { total: number; reimbursed: number; outstanding: number }
+}
+
+export const generateInsightsFn = httpsCallable<
+  InsightsSummary,
+  { insights: string[] }
+>(fns, 'generateInsights')

@@ -119,6 +119,7 @@ Receipts: `web/src/lib/receipts.ts` (`uploadReceipt`, `listReceipts`,
 ### Cloud Functions — `functions/src/`
 - `recurring.ts`: `dailyRecurring` (scheduled 6am America/Denver) → `materializeMonth` creates `recurring-*` transactions for the current fiscal month (×12/13, income-then-expense largest-first, idempotent via `meta/materializations`); `materializeRecurringNow` (callable, manual/catch-up).
 - `ai.ts`: `scanReceipt` (callable) — Gemini 3.5 Flash on Vertex (`global` endpoint — 3.x models 404 in us-central1); returns extraction JSON (amount/date/category/description/tags/hsa + `lineItems` grouped one-per-category with tax allocated). Does NOT write; the client saves.
+- `insights.ts`: `generateInsights` (callable) — Gemini 3.5 Flash **Lite**, `thinkingLevel: MINIMAL`. Takes an already-aggregated client-side summary (totals, top categories/tags/expenses, HSA snapshot — NOT raw transactions) so each call stays small (~600 tokens) and cheap; returns `{ insights: string[] }`. Only called on explicit user action (Reports page "Generate" button), never automatically.
 - `reporting.ts`: `dailyBigQuerySync` (2am) + `syncBigQueryNow` (callable) — full `WRITE_TRUNCATE` refresh of `budget.transactions`.
 - `notifications.ts`: `onTransactionWrite` (Firestore trigger on `transactions/{id}`) → FCM push to OTHER users' tokens (skips `system`/`migration` actors, prunes dead tokens); `sendTestNotification` (callable → caller's own devices).
 - `exports.ts`: `exportAuditZip` (callable) — zips receipts + `manifest.csv` for a scope/year, uploads to `exports/`, returns the path (client fetches a download URL).
@@ -126,7 +127,16 @@ Receipts: `web/src/lib/receipts.ts` (`uploadReceipt`, `listReceipts`,
 
 ### Client → Function callables — `web/src/lib/functions.ts`
 `scanReceiptFn`, `materializeRecurringNowFn`, `syncBigQueryNowFn`,
-`exportAuditZipFn`, `sendTestNotificationFn`.
+`exportAuditZipFn`, `sendTestNotificationFn`, `generateInsightsFn`.
+
+### Filter persistence & multi-select
+`web/src/lib/usePersistedFilters.ts` — a `useState`-like hook backed by
+localStorage with a 60-minute sliding TTL, so list/report filters survive
+navigating away and back (e.g. into a transaction and back). Used by History,
+HSA, and Reports, each under its own storage key (`filters:history`,
+`filters:hsa`, `filters:reports`). `web/src/components/MultiSelect.tsx` is a
+checkbox-popover multi-select (categories/tags/types) built on the `popover`
+and `checkbox` shadcn primitives.
 
 ## Auth & security
 Firebase Auth Google sign-in. `web/src/lib/auth.tsx` resolves membership: super
